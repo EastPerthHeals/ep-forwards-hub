@@ -47,6 +47,34 @@ app.get('/api/players', (req, res) => {
   res.json(out);
 });
 
+// ── LIVE GAME DAY API ────────────────────────────────────────────────────────
+
+let liveGameDay = [
+  {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+  {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+  {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+  {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+];
+
+app.get('/api/gameday', (req, res) => {
+  res.json(liveGameDay);
+});
+
+app.post('/api/gameday', (req, res) => {
+  liveGameDay = req.body;
+  res.json({ ok: true });
+});
+
+app.post('/api/gameday/reset', (req, res) => {
+  liveGameDay = [
+    {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+    {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+    {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+    {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
+  ];
+  res.json({ ok: true });
+});
+
 // ── ADMIN API ───────────────────────────────────────────────────────────────
 
 app.post('/api/admin/rounds', requireAdmin, (req, res) => {

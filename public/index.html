@@ -174,9 +174,15 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
     </div>
     <div class="gd-breakdown" id="gd-breakdown"></div>
   </div>
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px">
     <div class="section-label" style="margin-bottom:0">Quarter stats</div>
-    <button class="gd-reset-btn" onclick="resetGD()">Reset all</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button id="statsToggle" onclick="toggleStatMode()" style="background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent-light);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:var(--font)">I am the Statistician</button>
+      <button class="gd-reset-btn" onclick="resetGD()">Reset all</button>
+    </div>
+  </div>
+  <div id="viewerBanner" style="display:none;background:rgba(74,127,193,0.1);border:1px solid rgba(74,127,193,0.3);border-radius:8px;padding:8px 14px;margin-bottom:12px;font-size:12px;color:var(--accent-light);text-align:center">
+    <span class="live-dot"></span>Live view — updating every 3 seconds
   </div>
   <div class="colour-legend">
     <div class="cl-item"><div class="cl-dot" style="background:var(--c-purple)"></div>Well above target</div>
@@ -260,6 +266,8 @@ function l2k(l){return{'Inside 50s':'i50','% Scores I50':'scoresI50','% Accuracy
 
 const EMPTY=()=>({i50:'',score:'',tackles:'',marks:'',oppoR50:''});
 let gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];
+let isStatMode=false;
+let pollInterval=null;
 
 function parseScore(val){if(!val||val==='')return null;const s=String(val).trim();if(s.includes('.')){const p=s.split('.');const g=parseInt(p[0])||0,b=parseInt(p[1])||0;return{goals:g,behinds:b,totalScores:g+b};}const n=parseInt(s);return isNaN(n)?null:{goals:n,behinds:0,totalScores:n};}
 function calcQtr(q){
@@ -278,8 +286,49 @@ function calcQtr(q){
 }
 
 function updateGD(){const calcs=gd.map(q=>calcQtr(q));const valid=calcs.filter(c=>c!==null);calcs.forEach((c,i)=>{const sE=document.getElementById('gd-qscore-'+i),vE=document.getElementById('gd-qvs-'+i),crd=document.getElementById('gd-card-'+i),clE=document.getElementById('gd-calcs-'+i);if(!sE)return;if(c&&c.force!==undefined){const d=c.force-195;sE.textContent=c.force;sE.style.color=col('force',c.force);vE.textContent=(d>=0?'+':'')+d+' vs target';vE.style.color=d>=0?C.green:C.red;crd.classList.add('has-data');}else if(c){sE.textContent='...';sE.style.color=C.muted;vE.textContent='fill all fields';vE.style.color=C.muted;crd.classList.add('has-data');}else{sE.textContent='--';sE.style.color=C.muted;vE.textContent='';crd.classList.remove('has-data');}if(clE&&c){const rows=[{l:'Inside 50s',v:c.i50,k:'i50',u:''},{l:'% Scores I50',v:c.scoresI50,k:'scoresI50',u:'%'},{l:'Accuracy %',v:c.accuracy,k:'accuracy',u:'%'},{l:'% Tackles I50',v:c.tacklesI50,k:'tacklesI50',u:'%'},{l:'% Marks I50',v:c.marksI50,k:'marksI50',u:'%'},{l:'% Oppo R50',v:c.oppoR50,k:'oppoR50',u:'%'}];clE.innerHTML=rows.map(r=>'<div class="gd-calc-row"><span class="gd-calc-label">'+r.l+'</span><span class="gd-calc-val" style="color:'+(r.v!==undefined?col(r.k,r.v):C.muted)+'">'+(r.v!==undefined?r.v.toFixed(1)+r.u:'--')+'</span></div>').join('');}else if(clE){clE.innerHTML='';}});const fE=document.getElementById('gd-force-num'),sE2=document.getElementById('gd-force-sub'),bE=document.getElementById('gd-breakdown');const wf=valid.filter(c=>c.force!==undefined);if(!wf.length){fE.textContent='--';fE.style.color=C.muted;sE2.textContent='Enter stats below';bE.innerHTML='';return;}const avg=Math.round(wf.reduce((a,c)=>a+c.force,0)/wf.length);fE.textContent=avg;fE.style.color=col('force',avg);sE2.textContent=wf.length+' qtr avg · '+(avg-195>=0?'+':'')+(avg-195)+' vs target';const bkm=[{label:'Inside 50s',key:'i50',tgt:12,unit:''},{label:'% Scores I50',key:'scoresI50',tgt:50,unit:'%'},{label:'Accuracy %',key:'accuracy',tgt:60,unit:'%'},{label:'% Tackles I50',key:'tacklesI50',tgt:24,unit:'%'},{label:'% Marks I50',key:'marksI50',tgt:24,unit:'%'},{label:'% Oppo R50',key:'oppoR50',tgt:25,unit:'%'}];bE.innerHTML=bkm.map(m=>{const vals=valid.map(c=>c[m.key]).filter(v=>v!==undefined);if(!vals.length)return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+C.muted+'">--</span><span class="gd-bk-tgt">tgt '+m.tgt+m.unit+'</span></div><div class="gd-bar"></div></div>';const a=Math.round(vals.reduce((x,y)=>x+y,0)/vals.length*10)/10;return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+col(m.key,a)+'">'+a+m.unit+'</span><span class="gd-bk-tgt">tgt '+m.tgt+m.unit+'</span></div><div class="gd-bar"><div class="gd-bar-fill" style="width:'+barPct(m.key,a)+'%;background:'+barCol(m.key,a)+'"></div></div></div>';}).join('');}
-function onInput(q,f,v){gd[q][f]=v;updateGD();}
-function resetGD(){gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];renderGD();}
+function onInput(q,f,v){gd[q][f]=v;updateGD();saveGameDay();}
+function saveGameDay(){fetch('/api/gameday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gd)});}
+function resetGD(){gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];fetch('/api/gameday/reset',{method:'POST'});renderGD();}
+
+function toggleStatMode(){
+  isStatMode=!isStatMode;
+  const btn=document.getElementById('statsToggle');
+  const banner=document.getElementById('viewerBanner');
+  if(isStatMode){
+    btn.textContent='Exit Statistician Mode';
+    btn.style.background='rgba(78,203,141,0.15)';
+    btn.style.borderColor='#4ecb8d';
+    btn.style.color='#4ecb8d';
+    banner.style.display='none';
+    if(pollInterval){clearInterval(pollInterval);pollInterval=null;}
+  } else {
+    btn.textContent='I am the Statistician';
+    btn.style.background='var(--accent-dim)';
+    btn.style.borderColor='var(--accent)';
+    btn.style.color='var(--accent-light)';
+    banner.style.display='block';
+    startPolling();
+  }
+  // disable/enable inputs
+  document.querySelectorAll('#gd-qtrs input').forEach(inp=>inp.disabled=!isStatMode);
+}
+
+async function startPolling(){
+  if(pollInterval)clearInterval(pollInterval);
+  pollInterval=setInterval(async()=>{
+    if(isStatMode)return;
+    const data=await fetch('/api/gameday').then(r=>r.json());
+    gd=data;
+    updateGD();
+    // update input values without re-rendering
+    [0,1,2,3].forEach(q=>{
+      ['i50','score','tackles','marks','oppoR50'].forEach(f=>{
+        const el=document.querySelector('#gd-card-'+q+' input[oninput*="\''+f+'\'"]');
+        if(el&&document.activeElement!==el)el.value=gd[q][f];
+      });
+    });
+  },3000);
+}
 function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];const flds=[{key:'i50',label:'Inside 50s',ph:'e.g. 12'},{key:'score',label:'Score (goal.behind)',ph:'e.g. 3.2'},{key:'tackles',label:'Tackles in I50',ph:'e.g. 4'},{key:'marks',label:'Marks in I50',ph:'e.g. 3'},{key:'oppoR50',label:'Oppo Rebound 50 (count)',ph:'e.g. 3'}];document.getElementById('gd-qtrs').innerHTML=ql.map((l,q)=>'<div class="gd-qtr-card" id="gd-card-'+q+'"><div class="gd-qtr-title">'+l+'</div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Force Rating</div><div class="gd-qtr-score" id="gd-qscore-'+q+'" style="color:var(--text-muted)">--</div><div class="gd-qtr-vs" id="gd-qvs-'+q+'"></div>'+flds.map(f=>'<div class="gd-field"><label>'+f.label+'</label><input type="text" inputmode="decimal" value="'+gd[q][f.key]+'" placeholder="'+f.ph+'" oninput="onInput('+q+',\''+f.key+'\',this.value)"/></div>').join('')+'<div id="gd-calcs-'+q+'"></div></div>').join('');updateGD();}
 
 function showPage(n,b){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');b.classList.add('active');}
@@ -301,6 +350,7 @@ async function loadData(){
   renderSeasonCharts();
   renderPlayerGrid();
   renderTeamRounds();
+  return true;
 }
 
 function renderSeasonSummary(){
@@ -409,7 +459,12 @@ function renderTeamContent(i){
   document.getElementById('teamContent').innerHTML=h;
 }
 
-loadData();
+loadData().then(()=>{
+  // start in viewer mode by default — inputs disabled, polling active
+  document.querySelectorAll('#gd-qtrs input').forEach(inp=>inp.disabled=true);
+  document.getElementById('viewerBanner').style.display='block';
+  startPolling();
+});
 </script>
 </body>
 </html>
