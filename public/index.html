@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>East Perth FC — Forwards Hub 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0d1117;--bg-card:#161c26;--bg-card2:#1c2333;
+  --border:rgba(99,131,179,0.18);--border-hover:rgba(99,131,179,0.4);
+  --accent:#4a7fc1;--accent-light:#6b9fd4;--accent-dim:rgba(74,127,193,0.15);--accent-dim2:rgba(74,127,193,0.08);
+  --text-primary:#e2e8f0;--text-secondary:#8899b4;--text-muted:rgba(136,153,180,0.55);
+  --c-red:#e07070;--c-orange:#e8a040;--c-green:#4ecb8d;--c-purple:#b07fe8;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font);min-height:100vh}
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
+.header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.header-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary)}
+.header-sub{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-left:8px}
+.header-admin{margin-left:auto;font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border);border-radius:6px}
+.header-admin:hover{color:var(--accent-light);border-color:var(--accent)}
+.nav{display:flex;gap:2px;padding:0 24px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:60px;z-index:99}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
+.nav-btn:hover{color:var(--text-secondary)}
+.nav-btn.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+.page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto}
+.page.active{display:block}
+.section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
+.colour-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.cl-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)}
+.cl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.gd-live-panel{background:var(--accent-dim2);border:1px solid rgba(74,127,193,0.3);border-radius:14px;padding:20px;margin-bottom:20px}
+.gd-force-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.gd-force-number{font-size:72px;font-weight:600;line-height:1}
+.gd-force-right{text-align:right}
+.gd-force-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:6px}
+.gd-force-sublabel{font-size:12px;color:var(--text-muted);margin-top:4px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--c-green);display:inline-block;margin-right:6px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+.gd-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:600px){.gd-breakdown{grid-template-columns:repeat(2,1fr)}}
+.gd-bk-card{background:var(--bg-card);border-radius:8px;padding:10px 12px}
+.gd-bk-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.gd-bk-vals{display:flex;justify-content:space-between;align-items:baseline}
+.gd-bk-val{font-size:17px;font-weight:500}
+.gd-bk-tgt{font-size:11px;color:var(--text-muted)}
+.gd-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:8px;overflow:hidden}
+.gd-bar-fill{height:100%;border-radius:2px;transition:width 0.4s}
+.gd-qtrs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:800px){.gd-qtrs{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.gd-qtrs{grid-template-columns:1fr}}
+.gd-qtr-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;transition:border-color 0.2s}
+.gd-qtr-card.has-data{border-color:rgba(74,127,193,0.4)}
+.gd-qtr-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
+.gd-qtr-score{font-size:28px;font-weight:600;text-align:center;margin-bottom:2px}
+.gd-qtr-vs{font-size:11px;text-align:center;color:var(--text-muted);margin-bottom:14px;min-height:16px}
+.gd-field{margin-bottom:9px}
+.gd-field label{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.gd-field input{width:100%;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:15px;padding:7px 10px;font-family:var(--font);text-align:center;transition:border-color 0.2s}
+.gd-field input:focus{outline:none;border-color:var(--accent)}
+.gd-field input::placeholder{color:var(--text-muted);font-size:12px}
+.gd-calc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-top:1px solid rgba(255,255,255,0.04)}
+.gd-calc-label{font-size:10px;color:var(--text-muted)}
+.gd-calc-val{font-size:12px;font-weight:500}
+.gd-reset-btn{background:rgba(192,57,43,0.1);border:1px solid rgba(192,57,43,0.22);color:var(--c-red);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--font)}
+.gd-reset-btn:hover{background:rgba(192,57,43,0.2)}
+.hint{font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;background:var(--bg-card);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:10px 14px}
+.round-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.round-tab{background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all 0.2s;font-family:var(--font)}
+.round-tab:hover{border-color:var(--accent);color:var(--accent-light)}
+.round-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:600px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+.metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.metric-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.metric-value{font-size:22px;font-weight:500}
+.metric-target{font-size:11px;color:var(--text-muted);margin-top:2px}
+.metric-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:10px;overflow:hidden}
+.metric-fill{height:100%;border-radius:2px}
+.force-total{background:var(--accent-dim2);border:1px solid rgba(74,127,193,0.25);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.force-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-light);margin-bottom:4px}
+.force-score{font-size:36px;font-weight:600}
+.force-target{font-size:12px;color:var(--text-muted)}
+.quarters{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.quarter-pill{text-align:center;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 6px}
+.qtr-label-sm{font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.qtr-val{font-size:18px;font-weight:500}
+.score-sources{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:16px}
+.source-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+.source-row:last-child{border-bottom:none}
+.source-name{color:var(--text-secondary)}
+.source-count{font-weight:500;color:var(--accent-light)}
+.notes-box{background:var(--bg-card);border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.6;color:var(--text-secondary)}
+.notes-heading{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-light);margin-bottom:6px}
+.player-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:500px){.player-grid{grid-template-columns:1fr}}
+.player-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s}
+.player-card:hover{background:var(--bg-card2);border-color:var(--border-hover)}
+.player-card.selected{border-color:var(--accent);background:var(--accent-dim)}
+.player-name{font-size:14px;font-weight:500;color:var(--text-primary);margin-bottom:4px}
+.player-rounds{font-size:11px;color:var(--text-muted)}
+.rating-dots{display:flex;gap:4px;margin-top:10px}
+.rating-dot{width:28px;height:6px;border-radius:3px}
+.r-excellent{background:#3b9e6e}.r-above{background:#5b8fcc}.r-average{background:#7b8fa8}.r-below{background:#8b6a3e}.r-well-below{background:#8b4f4f}.r-missing{background:rgba(255,255,255,0.08)}
+.review-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px;display:none}
+.review-panel.visible{display:block}
+.review-player-name{font-size:18px;font-weight:500;color:var(--accent-light);margin-bottom:16px}
+.review-round-header{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+.review-round-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted)}
+.review-rating-badge{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:20px}
+.badge-excellent{background:rgba(59,158,110,0.2);color:#4ecb8d}.badge-above{background:rgba(91,143,204,0.2);color:#7eb8f5}.badge-average{background:rgba(123,143,168,0.2);color:#9fb5cc}.badge-below{background:rgba(139,106,62,0.2);color:#c4935a}.badge-well-below{background:rgba(139,79,79,0.2);color:#d47070}
+.review-text{font-size:13px;line-height:1.7;color:var(--text-secondary)}
+.kpi-table{width:100%;border-collapse:collapse}
+.kpi-table th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border)}
+.kpi-table td{padding:12px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-secondary)}
+.kpi-table tr:last-child td{border-bottom:none}
+.kpi-table td:first-child{color:var(--text-primary);font-weight:500}
+.kpi-val{text-align:center;color:var(--accent-light)!important;font-weight:500}
+.chart-wrapper{position:relative;width:100%;height:260px;margin-bottom:24px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:600px){.two-col{grid-template-columns:1fr}}
+.season-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
+@media(max-width:600px){.season-summary-grid{grid-template-columns:repeat(2,1fr)}}
+.season-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.season-card-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.season-card-value{font-size:24px;font-weight:500}
+.wl-row{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.wl-pill{font-size:10px;font-weight:600;padding:3px 10px;border-radius:12px;letter-spacing:1px}
+.wl-w{background:rgba(59,158,110,0.2);color:#4ecb8d}.wl-l{background:rgba(192,57,43,0.2);color:#e07070}
+.season-metrics-table{width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:24px}
+.season-metrics-table th{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);padding:10px 12px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.season-metrics-table th:first-child{text-align:left}
+.season-metrics-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:12px;text-align:right;white-space:nowrap}
+.season-metrics-table td:first-child{text-align:left;color:var(--text-primary);font-weight:500}
+.season-metrics-table tr:last-child td{border-bottom:none;font-weight:600;color:var(--text-primary);background:var(--accent-dim2)}
+.target-col{color:var(--text-muted)!important;font-size:11px}
+.avg-col{font-weight:600!important}
+.chart-legend{display:flex;gap:16px;margin-bottom:10px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}
+.legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-dot"></div>
+  <div><span class="header-title">East Perth FC</span><span class="header-sub">Forwards Hub &middot; 2026</span></div>
+  <a href="/admin/" class="header-admin">Admin</a>
+</div>
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('gameday',this)">&#9679; Game Day</button>
+  <button class="nav-btn" onclick="showPage('season',this)">Season Tracker</button>
+  <button class="nav-btn" onclick="showPage('team',this)">Round by Round</button>
+  <button class="nav-btn" onclick="showPage('players',this)">Player Reviews</button>
+  <button class="nav-btn" onclick="showPage('kpi',this)">KPI Targets</button>
+</div>
+
+<!-- GAME DAY -->
+<div id="page-gameday" class="page active">
+  <div class="gd-live-panel">
+    <div class="gd-force-row">
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:8px"><span class="live-dot"></span>Live Force Rating</div>
+        <div class="gd-force-number" id="gd-force-num" style="color:var(--text-muted)">&#8212;</div>
+      </div>
+      <div class="gd-force-right">
+        <div class="gd-force-label">Target</div>
+        <div style="font-size:42px;font-weight:600;color:var(--text-muted)">195</div>
+        <div class="gd-force-sublabel" id="gd-force-sub">Enter stats below</div>
+      </div>
+    </div>
+    <div class="gd-breakdown" id="gd-breakdown"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="section-label" style="margin-bottom:0">Quarter stats</div>
+    <button class="gd-reset-btn" onclick="resetGD()">Reset all</button>
+  </div>
+  <div class="colour-legend">
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-purple)"></div>Well above target</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-green)"></div>On target</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-orange)"></div>Close to target</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-red)"></div>Below target</div>
+  </div>
+  <div class="hint">Enter raw numbers &mdash; all percentages and Force Rating calculated automatically.<br><strong>Score format:</strong> goal.behind e.g. <strong>1.3</strong> = 1 goal 3 behinds = 4 scores.</div>
+  <div class="gd-qtrs" id="gd-qtrs"></div>
+</div>
+
+<!-- SEASON TRACKER -->
+<div id="page-season" class="page">
+  <div class="section-label" style="margin-bottom:16px">2026 season &mdash; force rating all rounds</div>
+  <div class="colour-legend" style="margin-bottom:16px">
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-purple)"></div>225+ (elite)</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-green)"></div>195&ndash;224 (on target)</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-orange)"></div>177&ndash;194 (close)</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-red)"></div>&#8804;176 (below)</div>
+  </div>
+  <div class="season-summary-grid" id="seasonSummaryGrid"></div>
+  <div class="section-label" style="margin-bottom:6px">Force rating &mdash; round by round</div>
+  <div class="chart-legend"><span><span class="legend-dot" style="background:#3b9e6e"></span>Win</span><span><span class="legend-dot" style="background:#b03030"></span>Loss</span><span><span class="legend-dot" style="background:rgba(180,210,255,0.5);border:1px dashed rgba(180,210,255,0.6)"></span>Target 195</span></div>
+  <div class="chart-wrapper" style="height:240px"><canvas id="seasonChart"></canvas></div>
+  <div class="section-label" style="margin-bottom:8px">Metric breakdown &mdash; all rounds vs target</div>
+  <div class="colour-legend" style="margin-bottom:10px">
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-purple)"></div>Elite</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-green)"></div>On target</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-orange)"></div>Close</div>
+    <div class="cl-item"><div class="cl-dot" style="background:var(--c-red)"></div>Below</div>
+  </div>
+  <div style="overflow-x:auto"><table class="season-metrics-table"><thead id="metricTableHead"></thead><tbody id="metricTableBody"></tbody></table></div>
+  <div class="section-label" style="margin-bottom:12px;margin-top:4px">Force rating &mdash; wins vs losses</div>
+  <div class="chart-wrapper" style="height:180px"><canvas id="wlChart"></canvas></div>
+</div>
+
+<!-- ROUND BY ROUND -->
+<div id="page-team" class="page">
+  <div class="round-tabs" id="teamRoundTabs"></div>
+  <div id="teamContent"></div>
+</div>
+
+<!-- PLAYERS -->
+<div id="page-players" class="page">
+  <p class="section-label" style="margin-bottom:16px">Select a player to view their reviews</p>
+  <div class="player-grid" id="playerGrid"></div>
+  <div class="review-panel" id="reviewPanel">
+    <div class="review-player-name" id="reviewPlayerName"></div>
+    <div id="reviewContent"></div>
+  </div>
+</div>
+
+<!-- KPI -->
+<div id="page-kpi" class="page">
+  <p class="section-label" style="margin-bottom:16px">Forward line KPI benchmarks</p>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px;overflow-x:auto">
+    <table class="kpi-table"><thead><tr><th>Statistic</th><th style="text-align:center">Q1</th><th style="text-align:center">HT</th><th style="text-align:center">Q3</th><th style="text-align:center">FT</th></tr></thead>
+    <tbody>
+      <tr><td>Inside 50s</td><td class="kpi-val">12.5</td><td class="kpi-val">25</td><td class="kpi-val">37.5</td><td class="kpi-val">50</td></tr>
+      <tr><td>% Scores from I50</td><td class="kpi-val">6.25</td><td class="kpi-val">12.5</td><td class="kpi-val">18.75</td><td class="kpi-val">25 (50%)</td></tr>
+      <tr><td>% Goals from I50</td><td class="kpi-val">3.75</td><td class="kpi-val">7.5</td><td class="kpi-val">11.25</td><td class="kpi-val">15 (30%)</td></tr>
+      <tr><td>Accuracy %</td><td class="kpi-val">60%</td><td class="kpi-val">60%</td><td class="kpi-val">60%</td><td class="kpi-val">60%</td></tr>
+      <tr><td>Tackles in I50</td><td class="kpi-val">4</td><td class="kpi-val">8</td><td class="kpi-val">12</td><td class="kpi-val">12 (24%)</td></tr>
+      <tr><td>Marks in I50</td><td class="kpi-val">3</td><td class="kpi-val">6</td><td class="kpi-val">9</td><td class="kpi-val">12 (24%)</td></tr>
+      <tr><td>Opposition Rebound 50 %</td><td class="kpi-val">25%</td><td class="kpi-val">25%</td><td class="kpi-val">25%</td><td class="kpi-val">25%</td></tr>
+      <tr><td>Opposition Marks in I50</td><td class="kpi-val">2</td><td class="kpi-val">4</td><td class="kpi-val">6</td><td class="kpi-val">8</td></tr>
+    </tbody></table>
+  </div>
+  <p class="section-label" style="margin-bottom:6px">Force rating &mdash; season trend vs target (195)</p>
+  <div class="chart-legend"><span><span class="legend-dot" style="background:#3b9e6e"></span>Win</span><span><span class="legend-dot" style="background:#b03030"></span>Loss</span></div>
+  <div class="chart-wrapper"><canvas id="kpiChart"></canvas></div>
+</div>
+
+<script>
+const T={i50:{r:9,o:11,g:14},scoresI50:{r:39,o:49,g:69},accuracy:{r:44,o:59,g:74},tacklesI50:{r:17,o:23,g:31},marksI50:{r:17,o:23,g:34},oppoR50:{r:18,o:24,g:34},force:{r:176,o:194,g:224}};
+const C={red:'#e07070',orange:'#e8a040',green:'#4ecb8d',purple:'#b07fe8',muted:'rgba(136,153,180,0.55)'};
+const BAR={red:'#b03030',orange:'#9a6010',green:'#2e7d5e',purple:'#6a3fa0'};
+function col(k,v){if(v===undefined||v===null||isNaN(v))return C.muted;const t=T[k];if(v<=t.r)return C.red;if(v<=t.o)return C.orange;if(v<=t.g)return C.green;return C.purple;}
+function barCol(k,v){if(v===undefined||v===null||isNaN(v))return'#333';const t=T[k];if(v<=t.r)return BAR.red;if(v<=t.o)return BAR.orange;if(v<=t.g)return BAR.green;return BAR.purple;}
+function barPct(k,v){return Math.min(115,Math.round((v/T[k].g)*100));}
+function l2k(l){return{'Inside 50s':'i50','% Scores I50':'scoresI50','% Accuracy':'accuracy','% Tackles I50':'tacklesI50','% Marks I50':'marksI50','% Oppo R50':'oppoR50'}[l]||null;}
+
+const EMPTY=()=>({i50:'',score:'',tackles:'',marks:'',oppoR50:''});
+let gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];
+
+function parseScore(val){if(!val||val==='')return null;const s=String(val).trim();if(s.includes('.')){const p=s.split('.');const g=parseInt(p[0])||0,b=parseInt(p[1])||0;return{goals:g,behinds:b,totalScores:g+b};}const n=parseInt(s);return isNaN(n)?null:{goals:n,behinds:0,totalScores:n};}
+function calcQtr(q){const i50=parseFloat(q.i50);if(isNaN(i50)||i50<=0)return null;const r={i50};const sc=parseScore(q.score);if(sc){r.scoresI50=Math.round((sc.totalScores/i50)*1000)/10;r.accuracy=sc.totalScores>0?Math.round((sc.goals/sc.totalScores)*1000)/10:0;}const tk=parseFloat(q.tackles);if(!isNaN(tk))r.tacklesI50=Math.round((tk/i50)*1000)/10;const mk=parseFloat(q.marks);if(!isNaN(mk))r.marksI50=Math.round((mk/i50)*1000)/10;const op=parseFloat(q.oppoR50);if(!isNaN(op))r.oppoR50=Math.round((100-(op/i50)*100)*10)/10;const tgts={scoresI50:50,accuracy:60,tacklesI50:24,marksI50:24,oppoR50:25};let tot=0,cnt=0;['scoresI50','accuracy','tacklesI50','marksI50','oppoR50'].forEach(k=>{if(r[k]!==undefined){tot+=Math.min(r[k]/tgts[k],2)*39;cnt++;}});if(cnt>0)r.force=Math.round((tot/cnt)*5);return r;}
+
+function updateGD(){const calcs=gd.map(q=>calcQtr(q));const valid=calcs.filter(c=>c!==null);calcs.forEach((c,i)=>{const sE=document.getElementById('gd-qscore-'+i),vE=document.getElementById('gd-qvs-'+i),crd=document.getElementById('gd-card-'+i),clE=document.getElementById('gd-calcs-'+i);if(!sE)return;if(c&&c.force!==undefined){const d=c.force-195;sE.textContent=c.force;sE.style.color=col('force',c.force);vE.textContent=(d>=0?'+':'')+d+' vs target';vE.style.color=d>=0?C.green:C.red;crd.classList.add('has-data');}else if(c){sE.textContent='...';sE.style.color=C.muted;vE.textContent='fill all fields';vE.style.color=C.muted;crd.classList.add('has-data');}else{sE.textContent='--';sE.style.color=C.muted;vE.textContent='';crd.classList.remove('has-data');}if(clE&&c){const rows=[{l:'% Scores I50',v:c.scoresI50,k:'scoresI50'},{l:'Accuracy %',v:c.accuracy,k:'accuracy'},{l:'% Tackles I50',v:c.tacklesI50,k:'tacklesI50'},{l:'% Marks I50',v:c.marksI50,k:'marksI50'},{l:'% Oppo R50',v:c.oppoR50,k:'oppoR50'}];clE.innerHTML=rows.map(r=>'<div class="gd-calc-row"><span class="gd-calc-label">'+r.l+'</span><span class="gd-calc-val" style="color:'+(r.v!==undefined?col(r.k,r.v):C.muted)+'">'+(r.v!==undefined?r.v.toFixed(1)+'%':'--')+'</span></div>').join('');}else if(clE){clE.innerHTML='';}});const fE=document.getElementById('gd-force-num'),sE2=document.getElementById('gd-force-sub'),bE=document.getElementById('gd-breakdown');const wf=valid.filter(c=>c.force!==undefined);if(!wf.length){fE.textContent='--';fE.style.color=C.muted;sE2.textContent='Enter stats below';bE.innerHTML='';return;}const avg=Math.round(wf.reduce((a,c)=>a+c.force,0)/wf.length);fE.textContent=avg;fE.style.color=col('force',avg);sE2.textContent=wf.length+' qtr avg · '+(avg-195>=0?'+':'')+(avg-195)+' vs target';const bkm=[{label:'% Scores I50',key:'scoresI50',tgt:50},{label:'Accuracy %',key:'accuracy',tgt:60},{label:'% Tackles I50',key:'tacklesI50',tgt:24},{label:'% Marks I50',key:'marksI50',tgt:24},{label:'% Oppo R50',key:'oppoR50',tgt:25}];bE.innerHTML=bkm.map(m=>{const vals=valid.map(c=>c[m.key]).filter(v=>v!==undefined);if(!vals.length)return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+C.muted+'">--</span><span class="gd-bk-tgt">tgt '+m.tgt+'%</span></div><div class="gd-bar"></div></div>';const a=Math.round(vals.reduce((x,y)=>x+y,0)/vals.length*10)/10;return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+col(m.key,a)+'">'+a+'%</span><span class="gd-bk-tgt">tgt '+m.tgt+'%</span></div><div class="gd-bar"><div class="gd-bar-fill" style="width:'+barPct(m.key,a)+'%;background:'+barCol(m.key,a)+'"></div></div></div>';}).join('');}
+function onInput(q,f,v){gd[q][f]=v;updateGD();}
+function resetGD(){gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];renderGD();}
+function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];const flds=[{key:'i50',label:'Inside 50s',ph:'e.g. 12'},{key:'score',label:'Score (goal.behind)',ph:'e.g. 3.2'},{key:'tackles',label:'Tackles in I50',ph:'e.g. 4'},{key:'marks',label:'Marks in I50',ph:'e.g. 3'},{key:'oppoR50',label:'Oppo Rebound 50 (count)',ph:'e.g. 3'}];document.getElementById('gd-qtrs').innerHTML=ql.map((l,q)=>'<div class="gd-qtr-card" id="gd-card-'+q+'"><div class="gd-qtr-title">'+l+'</div><div class="gd-qtr-score" id="gd-qscore-'+q+'" style="color:var(--text-muted)">--</div><div class="gd-qtr-vs" id="gd-qvs-'+q+'"></div>'+flds.map(f=>'<div class="gd-field"><label>'+f.label+'</label><input type="text" inputmode="decimal" value="'+gd[q][f.key]+'" placeholder="'+f.ph+'" oninput="onInput('+q+',"'+f.key+'",this.value)"/></div>').join('')+'<div id="gd-calcs-'+q+'"></div></div>').join('');updateGD();}
+
+function showPage(n,b){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+n).classList.add('active');b.classList.add('active');}
+
+const rC={"Excellent":"excellent","Above Average":"above","Average":"average","Below Average":"below","Well Below Average":"well-below"};
+const bC={"Excellent":"badge-excellent","Above Average":"badge-above","Average":"badge-average","Below Average":"badge-below","Well Below Average":"badge-well-below"};
+
+let allRounds=[], allPlayers={};
+let seasonChart=null, wlChart=null, kpiChart=null;
+
+async function loadData(){
+  [allRounds, allPlayers] = await Promise.all([
+    fetch('/api/rounds').then(r=>r.json()),
+    fetch('/api/players').then(r=>r.json())
+  ]);
+  renderGD();
+  renderSeasonSummary();
+  renderMetricTable();
+  renderSeasonCharts();
+  renderPlayerGrid();
+  renderTeamRounds();
+}
+
+function renderSeasonSummary(){
+  const forces=allRounds.map(r=>r.force_avg);
+  const wls=allRounds.map(r=>r.wl);
+  if(!forces.length){document.getElementById('seasonSummaryGrid').innerHTML='';return;}
+  const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length*100)/100;
+  const best=Math.max(...forces);
+  const bestRd=allRounds[forces.indexOf(best)];
+  const above=forces.filter(f=>f>=195).length;
+  const wins=wls.filter(w=>w==='W').length,losses=wls.filter(w=>w==='L').length;
+  document.getElementById('seasonSummaryGrid').innerHTML=`
+    <div class="season-card"><div class="season-card-label">Season avg</div><div class="season-card-value" style="color:${col('force',avg)}">${avg}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Target: 195</div></div>
+    <div class="season-card"><div class="season-card-label">Best round</div><div class="season-card-value" style="color:${col('force',best)}">${best}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">${bestRd.short}${bestRd.opponent?' vs '+bestRd.opponent:''}</div></div>
+    <div class="season-card"><div class="season-card-label">Rounds above target</div><div class="season-card-value" style="color:var(--c-green)">${above}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">of ${forces.length} played</div></div>
+    <div class="season-card"><div class="season-card-label">Win / Loss</div><div class="wl-row"><span class="wl-pill wl-w">W ${wins}</span><span class="wl-pill wl-l">L ${losses}</span></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">Rounds 1&ndash;${allRounds.length}</div></div>
+  `;
+}
+
+function renderMetricTable(){
+  const metricKeys=[
+    {label:'Inside 50s',col:'i50',key:'i50',target:12},
+    {label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},
+    {label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},
+    {label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},
+    {label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},
+    {label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25},
+  ];
+  const head=document.getElementById('metricTableHead');
+  const body=document.getElementById('metricTableBody');
+  head.innerHTML='<tr><th>Metric</th><th>Target</th>'+allRounds.map(r=>'<th>'+r.short+'</th>').join('')+'<th>Season avg</th></tr>';
+  let h='';
+  metricKeys.forEach(m=>{
+    const vals=allRounds.map(r=>r[m.col]);
+    const valid=vals.filter(v=>v!==null&&v!==undefined);
+    const avg=valid.length?Math.round(valid.reduce((a,b)=>a+b,0)/valid.length*100)/100:null;
+    h+='<tr><td>'+m.label+'</td><td class="target-col" style="text-align:right">'+m.target+'</td>';
+    vals.forEach(v=>{h+='<td style="color:'+(v!==null?col(m.key,v):C.muted)+'">'+(v!==null?Math.round(v*10)/10:'—')+'</td>';});
+    h+='<td class="avg-col" style="color:'+(avg!==null?col(m.key,avg):C.muted)+'">'+(avg!==null?avg:'—')+'</td></tr>';
+  });
+  const forceVals=allRounds.map(r=>r.force_avg);
+  const forceAvg=forceVals.length?Math.round(forceVals.reduce((a,b)=>a+b,0)/forceVals.length*100)/100:null;
+  h+='<tr><td>Force Rating</td><td class="target-col" style="text-align:right">195</td>';
+  forceVals.forEach(v=>{h+='<td style="color:'+col('force',v)+'">'+v+'</td>';});
+  h+='<td class="avg-col" style="color:'+(forceAvg!==null?col('force',forceAvg):C.muted)+'">'+(forceAvg!==null?forceAvg:'—')+'</td></tr>';
+  body.innerHTML=h;
+}
+
+function renderSeasonCharts(){
+  const forces=allRounds.map(r=>r.force_avg);
+  const labels=allRounds.map(r=>r.short);
+  const wls=allRounds.map(r=>r.wl);
+  const bc=forces.map((_,i)=>wls[i]==='W'?'#3b9e6e':'#b03030');
+  const mkChart=(id,lbls,data,colors)=>{
+    const el=document.getElementById(id);
+    const existing=Chart.getChart(el);if(existing)existing.destroy();
+    return new Chart(el,{type:'bar',data:{labels:lbls,datasets:[{label:'Force Rating',data,backgroundColor:colors,borderRadius:6,order:2},{label:'Target',data:Array(data.length).fill(195),type:'line',borderColor:'rgba(180,210,255,0.55)',borderDash:[6,4],borderWidth:2,pointRadius:0,fill:false,order:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8899b4',font:{size:11}},grid:{color:'rgba(99,131,179,0.08)'}},y:{ticks:{color:'#8899b4',font:{size:11}},grid:{color:'rgba(99,131,179,0.1)'},min:100,max:260}}}});
+  };
+  mkChart('seasonChart',labels,forces,bc);
+  mkChart('kpiChart',labels,forces,bc);
+  const wins=forces.filter((_,i)=>wls[i]==='W');
+  const losses=forces.filter((_,i)=>wls[i]==='L');
+  const avgW=wins.length?Math.round(wins.reduce((a,b)=>a+b,0)/wins.length):0;
+  const avgL=losses.length?Math.round(losses.reduce((a,b)=>a+b,0)/losses.length):0;
+  const wlEl=document.getElementById('wlChart');
+  const ex=Chart.getChart(wlEl);if(ex)ex.destroy();
+  new Chart(wlEl,{type:'bar',data:{labels:['Wins (avg)','Losses (avg)','Target'],datasets:[{data:[avgW,avgL,195],backgroundColor:['#3b9e6e','#b03030','rgba(180,210,255,0.3)'],borderRadius:8}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8899b4',font:{size:11}},grid:{color:'rgba(99,131,179,0.08)'},min:100,max:260},y:{ticks:{color:'#c0ccdc',font:{size:12}},grid:{display:false}}}}});
+}
+
+function renderPlayerGrid(){
+  const maxRd=allRounds.length;
+  const rdLabels=allRounds.map(r=>r.short);
+  document.getElementById('playerGrid').innerHTML=Object.entries(allPlayers).map(([n,d])=>{
+    const dots=rdLabels.map(rd=>{const r=d.rounds.find(x=>x.rd===rd);return r?'<div class="rating-dot r-'+rC[r.rating]+'" title="'+rd+': '+r.rating+'"></div>':'<div class="rating-dot r-missing"></div>';}).join('');
+    return'<div class="player-card" onclick="selectPlayer(\''+n.replace(/'/g,"\\'")+'\')" data-player="'+n.replace(/"/g,'&quot;')+'"><div class="player-name">'+n+'</div><div class="player-rounds">'+d.rounds.map(r=>r.rd).join(' · ')+'</div><div class="rating-dots">'+dots+'</div></div>';
+  }).join('');
+}
+
+function selectPlayer(name){
+  document.querySelectorAll('.player-card').forEach(c=>{c.classList.toggle('selected',c.dataset.player===name);});
+  const d=allPlayers[name];
+  document.getElementById('reviewPlayerName').textContent=name;
+  document.getElementById('reviewContent').innerHTML=d.rounds.map(r=>'<div style="margin-bottom:20px"><div class="review-round-header"><span class="review-round-label">'+r.rd+'</span><span class="review-rating-badge '+bC[r.rating]+'">'+r.rating+'</span></div><div class="review-text">'+r.comment+'</div></div>').join('<hr style="border:none;border-top:1px solid rgba(255,255,255,0.05);margin:16px 0">');
+  const p=document.getElementById('reviewPanel');p.classList.add('visible');p.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function renderTeamRounds(){
+  document.getElementById('teamRoundTabs').innerHTML=allRounds.map((r,i)=>'<button class="round-tab '+(i===0?'active':'')+'" onclick="selectRound('+i+',this)">'+r.short+'</button>').join('');
+  if(allRounds.length)renderTeamContent(0);
+}
+function selectRound(i,b){document.querySelectorAll('.round-tab').forEach(t=>t.classList.remove('active'));b.classList.add('active');renderTeamContent(i);}
+function renderTeamContent(i){
+  const r=allRounds[i];const avg=r.force_avg;
+  const metricDefs=[{label:'Inside 50s',col:'i50',key:'i50',target:12},{label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},{label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},{label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},{label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},{label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25}];
+  let h='<div class="force-total"><div><div class="force-label">Force Rating — '+r.label+' <span style="font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;background:'+(r.wl==='W'?'rgba(59,158,110,0.2)':'rgba(192,57,43,0.2)')+';color:'+(r.wl==='W'?'#4ecb8d':'#e07070')+'">'+(r.wl==='W'?'WIN':'LOSS')+'</span></div><div class="force-score" style="color:'+col('force',avg)+'">'+avg+'</div><div class="force-target">Target: 195</div></div>';
+  if(r.force_q1||r.force_q2||r.force_q3||r.force_q4){h+='<div class="quarters">'+['Q1','Q2','Q3','Q4'].map((q,qi)=>{const v=[r.force_q1,r.force_q2,r.force_q3,r.force_q4][qi];return v?'<div class="quarter-pill"><div class="qtr-label-sm">'+q+'</div><div class="qtr-val" style="color:'+col('force',v)+'">'+v+'</div></div>':'';}).join('')+'</div>';}
+  h+='</div><div class="section-label" style="margin-bottom:12px">Metrics</div><div class="metrics-grid">';
+  metricDefs.forEach(m=>{const v=r[m.col];if(v===null||v===undefined)return;const c2=col(m.key,v),bc=barCol(m.key,v),p=barPct(m.key,v);h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:'+c2+'">'+Math.round(v*10)/10+'</div><div class="metric-target">Target: '+m.target+'</div><div class="metric-bar"><div class="metric-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';});
+  h+='</div><div class="two-col">';
+  if(r.score_sources&&r.score_sources.length){h+='<div><div class="section-label" style="margin-bottom:10px">Score sources</div><div class="score-sources">'+r.score_sources.map(([n,c])=>'<div class="source-row"><span class="source-name">'+n+'</span><span class="source-count">'+c+'</span></div>').join('')+'</div></div>';}else{h+='<div></div>';}
+  let notes='<div>';
+  if(r.learned)notes+='<div class="notes-box"><div class="notes-heading">Things we learned</div>'+r.learned+'</div>';
+  if(r.work_on)notes+='<div class="notes-box" style="border-color:#b03030"><div class="notes-heading" style="color:#e07070">Things to work on</div>'+r.work_on+'</div>';
+  if(r.intercept_fwds!==null&&r.intercept_fwds!==undefined)notes+='<div class="notes-box" style="border-color:#4a7fc1"><div class="notes-heading" style="color:#6b9fd4">Intercept goals</div>Fwds: <strong>'+r.intercept_fwds+'</strong> &middot; Backs: <strong>'+r.intercept_backs+'</strong> &middot; Mids: <strong>'+r.intercept_mids+'</strong></div>';
+  notes+='</div>';h+=notes+'</div>';
+  document.getElementById('teamContent').innerHTML=h;
+}
+
+loadData();
+</script>
+</body>
+</html>

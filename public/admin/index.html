@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin — EP Forwards Hub</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--card:#161c26;--border:rgba(99,131,179,0.18);
+  --accent:#4a7fc1;--accent-light:#6b9fd4;
+  --text:#e2e8f0;--muted:rgba(136,153,180,0.55);--secondary:#8899b4;
+  --green:#4ecb8d;--red:#e07070;--orange:#e8a040;
+  --font:'Segoe UI',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px}
+.header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.header-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.header-sub{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-left:8px}
+.header-back{margin-left:auto;font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border);border-radius:6px}
+.header-back:hover{color:var(--accent-light);border-color:var(--accent)}
+
+/* login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px)}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;width:360px}
+.login-title{font-size:16px;font-weight:500;margin-bottom:24px;color:var(--accent-light)}
+.login-err{font-size:12px;color:var(--red);margin-top:12px;display:none}
+
+/* main layout */
+.main{display:none;padding:24px;max-width:900px;margin:0 auto}
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border);padding-bottom:0}
+.tab{background:none;border:none;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;font-family:var(--font)}
+.tab:hover{color:var(--secondary)}
+.tab.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+.panel{display:none}.panel.active{display:block}
+
+/* forms */
+label{display:block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:8px 10px;font-family:var(--font);transition:border-color 0.2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+select option{background:#1c2333}
+.field{margin-bottom:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:600px){.grid2,.grid3,.grid4{grid-template-columns:1fr 1fr}}
+.section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin:20px 0 12px}
+.btn{background:var(--accent);border:none;color:#fff;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:10px 20px;border-radius:8px;cursor:pointer;font-family:var(--font)}
+.btn:hover{background:#3a6db0}
+.btn-danger{background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.3);color:var(--red)}
+.btn-danger:hover{background:rgba(192,57,43,0.25)}
+.btn-sm{padding:5px 12px;font-size:10px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:14px;color:var(--accent-light)}
+.msg{font-size:12px;padding:8px 12px;border-radius:6px;margin-top:12px;display:none}
+.msg.ok{background:rgba(59,158,110,0.15);color:var(--green);border:1px solid rgba(59,158,110,0.3)}
+.msg.err{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3)}
+
+/* round list */
+.round-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
+.round-row:last-child{border-bottom:none}
+.round-short{font-weight:500;color:var(--text);min-width:60px}
+.round-opp{color:var(--secondary);flex:1}
+.round-force{font-weight:500;min-width:40px;text-align:right}
+.wl-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;letter-spacing:1px}
+.wl-w{background:rgba(59,158,110,0.2);color:var(--green)}.wl-l{background:rgba(192,57,43,0.2);color:var(--red)}
+.edit-btn{background:none;border:1px solid var(--border);color:var(--muted);font-size:10px;padding:3px 10px;border-radius:5px;cursor:pointer;font-family:var(--font)}
+.edit-btn:hover{border-color:var(--accent);color:var(--accent-light)}
+.del-btn{background:none;border:1px solid rgba(192,57,43,0.2);color:var(--red);font-size:10px;padding:3px 8px;border-radius:5px;cursor:pointer;font-family:var(--font)}
+.del-btn:hover{background:rgba(192,57,43,0.15)}
+
+/* score sources */
+.sources-list{margin-bottom:8px}
+.source-item{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.source-item input{flex:1}
+.source-item input:last-child{width:70px;flex:none}
+.remove-source{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+.add-source-btn{background:none;border:1px dashed var(--border);color:var(--muted);font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:var(--font);margin-top:4px}
+.add-source-btn:hover{border-color:var(--accent);color:var(--accent-light)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-dot"></div>
+  <div><span class="header-title">East Perth FC</span><span class="header-sub">Admin</span></div>
+  <a href="/" class="header-back">&#8592; Dashboard</a>
+</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-box">
+    <div class="login-title">Admin Login</div>
+    <div class="field"><label>Password</label><input type="password" id="pwInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+    <button class="btn" style="width:100%" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr">Incorrect password</div>
+  </div>
+</div>
+
+<!-- MAIN ADMIN -->
+<div class="main" id="mainAdmin">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('rounds',this)">Rounds</button>
+    <button class="tab" onclick="switchTab('reviews',this)">Player Reviews</button>
+  </div>
+
+  <!-- ROUNDS PANEL -->
+  <div class="panel active" id="panel-rounds">
+    <div class="card">
+      <div class="card-title" id="roundFormTitle">Add New Round</div>
+      <div class="grid3">
+        <div class="field"><label>Round number</label><input type="number" id="r-num" placeholder="9"/></div>
+        <div class="field"><label>Short label</label><input type="text" id="r-short" placeholder="Rd 9"/></div>
+        <div class="field"><label>Opponent</label><input type="text" id="r-opp" placeholder="Claremont"/></div>
+      </div>
+      <div class="field"><label>Full label</label><input type="text" id="r-label" placeholder="Rd 9 · Claremont"/></div>
+      <div class="grid2">
+        <div class="field"><label>Result</label>
+          <select id="r-wl"><option value="W">Win</option><option value="L">Loss</option><option value="D">Draw</option></select>
+        </div>
+        <div class="field"><label>Force Rating (avg)</label><input type="number" id="r-force" placeholder="203"/></div>
+      </div>
+
+      <div class="section-label">Quarter force ratings (optional)</div>
+      <div class="grid4">
+        <div class="field"><label>Q1</label><input type="number" id="r-q1" placeholder="210"/></div>
+        <div class="field"><label>Q2</label><input type="number" id="r-q2" placeholder="195"/></div>
+        <div class="field"><label>Q3</label><input type="number" id="r-q3" placeholder="215"/></div>
+        <div class="field"><label>Q4</label><input type="number" id="r-q4" placeholder="195"/></div>
+      </div>
+
+      <div class="section-label">Metrics</div>
+      <div class="grid3">
+        <div class="field"><label>Inside 50s (avg/qtr)</label><input type="number" id="r-i50" placeholder="12"/></div>
+        <div class="field"><label>% Scores I50</label><input type="number" id="r-scores" placeholder="52"/></div>
+        <div class="field"><label>% Accuracy</label><input type="number" id="r-acc" placeholder="60"/></div>
+        <div class="field"><label>% Tackles I50</label><input type="number" id="r-tack" placeholder="24"/></div>
+        <div class="field"><label>% Marks I50</label><input type="number" id="r-marks" placeholder="24"/></div>
+        <div class="field"><label>% Oppo R50</label><input type="number" id="r-oppo" placeholder="25"/></div>
+      </div>
+
+      <div class="section-label">Score sources</div>
+      <div class="sources-list" id="sourcesList"></div>
+      <button class="add-source-btn" onclick="addSource()">+ Add source</button>
+
+      <div class="section-label">Notes</div>
+      <div class="field"><label>Things we learned</label><textarea id="r-learned" placeholder="What did we learn this round?"></textarea></div>
+      <div class="field"><label>Things to work on</label><textarea id="r-workOn" placeholder="Key areas to improve..."></textarea></div>
+
+      <div class="section-label">Intercept goals</div>
+      <div class="grid3">
+        <div class="field"><label>Forwards</label><input type="number" id="r-if" placeholder="3"/></div>
+        <div class="field"><label>Backs</label><input type="number" id="r-ib" placeholder="2"/></div>
+        <div class="field"><label>Mids</label><input type="number" id="r-im" placeholder="1"/></div>
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        <button class="btn" onclick="saveRound()">Save Round</button>
+        <button class="btn btn-danger btn-sm" id="cancelEditBtn" onclick="cancelEdit()" style="display:none">Cancel edit</button>
+      </div>
+      <div class="msg" id="roundMsg"></div>
+    </div>
+
+    <div class="section-label">Existing rounds</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div id="roundList"></div>
+    </div>
+  </div>
+
+  <!-- REVIEWS PANEL -->
+  <div class="panel" id="panel-reviews">
+    <div class="card">
+      <div class="card-title" id="reviewFormTitle">Add / Edit Player Review</div>
+      <div class="grid2">
+        <div class="field"><label>Player name</label>
+          <input type="text" id="rv-player" list="playerSuggestions" placeholder="B. Middleton"/>
+          <datalist id="playerSuggestions"></datalist>
+        </div>
+        <div class="field"><label>Round number</label><input type="number" id="rv-round" placeholder="9"/></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Round label</label><input type="text" id="rv-rdlabel" placeholder="Rd 9"/></div>
+        <div class="field"><label>Rating</label>
+          <select id="rv-rating">
+            <option>Excellent</option>
+            <option>Above Average</option>
+            <option selected>Average</option>
+            <option>Below Average</option>
+            <option>Well Below Average</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Review comment</label><textarea id="rv-comment" style="min-height:120px" placeholder="Player review text..."></textarea></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+        <button class="btn" onclick="saveReview()">Save Review</button>
+        <button class="btn btn-danger btn-sm" id="cancelReviewBtn" onclick="cancelReviewEdit()" style="display:none">Cancel edit</button>
+      </div>
+      <div class="msg" id="reviewMsg"></div>
+    </div>
+
+    <div class="section-label">Existing reviews</div>
+    <div id="reviewList"></div>
+  </div>
+</div>
+
+<script>
+let token = '';
+let editingRound = null;
+let editingReview = null;
+
+function doLogin(){
+  const pw = document.getElementById('pwInput').value;
+  fetch('/api/admin/players-list', {headers:{'x-admin-token':pw}})
+    .then(r=>{
+      if(r.ok){
+        token = pw;
+        document.getElementById('loginWrap').style.display = 'none';
+        document.getElementById('mainAdmin').style.display = 'block';
+        loadAdmin();
+      } else {
+        document.getElementById('loginErr').style.display = 'block';
+      }
+    });
+}
+
+function switchTab(name, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+}
+
+async function loadAdmin(){
+  await Promise.all([loadRounds(), loadReviews()]);
+}
+
+// ── ROUNDS ──────────────────────────────────────────────────
+
+let allRounds = [];
+
+async function loadRounds(){
+  allRounds = await fetch('/api/rounds').then(r=>r.json());
+  renderRoundList();
+}
+
+function renderRoundList(){
+  document.getElementById('roundList').innerHTML = allRounds.map(r=>`
+    <div class="round-row">
+      <span class="round-short">${r.short}</span>
+      <span class="round-opp">${r.opponent||'—'}</span>
+      <span class="round-force">${r.force_avg}</span>
+      <span class="wl-badge ${r.wl==='W'?'wl-w':'wl-l'}">${r.wl}</span>
+      <button class="edit-btn" onclick="editRound(${r.round_num})">Edit</button>
+      <button class="del-btn" onclick="deleteRound(${r.round_num},'${r.short}')">✕</button>
+    </div>
+  `).join('') || '<div style="padding:16px;color:var(--muted);font-size:13px">No rounds yet</div>';
+}
+
+function getVal(id){ return document.getElementById(id).value.trim(); }
+function getNum(id){ const v=parseFloat(document.getElementById(id).value); return isNaN(v)?null:v; }
+
+function getSources(){
+  const items = document.querySelectorAll('.source-item');
+  const sources = [];
+  items.forEach(item=>{
+    const inputs = item.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const count = parseInt(inputs[1].value);
+    if(name && !isNaN(count)) sources.push([name, count]);
+  });
+  return sources;
+}
+
+function addSource(name='', count=''){
+  const li = document.createElement('div');
+  li.className = 'source-item';
+  li.innerHTML = `<input type="text" placeholder="Source name" value="${name}"/><input type="number" placeholder="Count" value="${count}" style="width:70px"/><button class="remove-source" onclick="this.parentElement.remove()">×</button>`;
+  document.getElementById('sourcesList').appendChild(li);
+}
+
+function clearRoundForm(){
+  ['r-num','r-short','r-opp','r-label','r-force','r-q1','r-q2','r-q3','r-q4',
+   'r-i50','r-scores','r-acc','r-tack','r-marks','r-oppo','r-if','r-ib','r-im',
+   'r-learned','r-workOn'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('r-wl').value='W';
+  document.getElementById('sourcesList').innerHTML='';
+  editingRound = null;
+  document.getElementById('roundFormTitle').textContent='Add New Round';
+  document.getElementById('cancelEditBtn').style.display='none';
+}
+
+function cancelEdit(){ clearRoundForm(); }
+
+function editRound(num){
+  const r = allRounds.find(x=>x.round_num===num);
+  if(!r) return;
+  editingRound = num;
+  document.getElementById('r-num').value = r.round_num;
+  document.getElementById('r-short').value = r.short;
+  document.getElementById('r-opp').value = r.opponent||'';
+  document.getElementById('r-label').value = r.label;
+  document.getElementById('r-wl').value = r.wl;
+  document.getElementById('r-force').value = r.force_avg;
+  document.getElementById('r-q1').value = r.force_q1||'';
+  document.getElementById('r-q2').value = r.force_q2||'';
+  document.getElementById('r-q3').value = r.force_q3||'';
+  document.getElementById('r-q4').value = r.force_q4||'';
+  document.getElementById('r-i50').value = r.i50||'';
+  document.getElementById('r-scores').value = r.pct_scores_i50||'';
+  document.getElementById('r-acc').value = r.pct_accuracy||'';
+  document.getElementById('r-tack').value = r.pct_tackles_i50||'';
+  document.getElementById('r-marks').value = r.pct_marks_i50||'';
+  document.getElementById('r-oppo').value = r.pct_oppo_r50||'';
+  document.getElementById('r-if').value = r.intercept_fwds||'';
+  document.getElementById('r-ib').value = r.intercept_backs||'';
+  document.getElementById('r-im').value = r.intercept_mids||'';
+  document.getElementById('r-learned').value = r.learned||'';
+  document.getElementById('r-workOn').value = r.work_on||'';
+  document.getElementById('sourcesList').innerHTML='';
+  (r.score_sources||[]).forEach(([n,c])=>addSource(n,c));
+  document.getElementById('roundFormTitle').textContent='Edit Round '+r.short;
+  document.getElementById('cancelEditBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function saveRound(){
+  const num = parseInt(document.getElementById('r-num').value);
+  if(!num){ showMsg('roundMsg','Round number is required','err'); return; }
+  const payload = {
+    round_num: num,
+    short: getVal('r-short') || 'Rd '+num,
+    label: getVal('r-label') || 'Rd '+num,
+    opponent: getVal('r-opp'),
+    wl: document.getElementById('r-wl').value,
+    force_avg: getNum('r-force'),
+    force_q1: getNum('r-q1'), force_q2: getNum('r-q2'),
+    force_q3: getNum('r-q3'), force_q4: getNum('r-q4'),
+    i50: getNum('r-i50'), pct_scores_i50: getNum('r-scores'),
+    pct_accuracy: getNum('r-acc'), pct_tackles_i50: getNum('r-tack'),
+    pct_marks_i50: getNum('r-marks'), pct_oppo_r50: getNum('r-oppo'),
+    intercept_fwds: getNum('r-if'), intercept_backs: getNum('r-ib'),
+    intercept_mids: getNum('r-im'),
+    learned: getVal('r-learned'), work_on: getVal('r-workOn'),
+    score_sources: getSources(),
+  };
+  if(!payload.force_avg){ showMsg('roundMsg','Force Rating (avg) is required','err'); return; }
+  const res = await fetch('/api/admin/rounds', {method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify(payload)});
+  if(res.ok){ showMsg('roundMsg','Round saved!','ok'); clearRoundForm(); loadRounds(); }
+  else showMsg('roundMsg','Error saving round','err');
+}
+
+async function deleteRound(num, label){
+  if(!confirm('Delete '+label+'? This cannot be undone.')) return;
+  await fetch('/api/admin/rounds/'+num, {method:'DELETE',headers:{'x-admin-token':token}});
+  loadRounds();
+}
+
+// ── REVIEWS ──────────────────────────────────────────────────
+
+let allReviewsFlat = [];
+
+async function loadReviews(){
+  const data = await fetch('/api/players').then(r=>r.json());
+  // flatten for display
+  allReviewsFlat = [];
+  Object.entries(data).forEach(([player, d])=>{
+    d.rounds.forEach(r=>allReviewsFlat.push({player, rd: r.rd, rating: r.rating, comment: r.comment}));
+  });
+  // player suggestions
+  const names = [...new Set(allReviewsFlat.map(r=>r.player))].sort();
+  document.getElementById('playerSuggestions').innerHTML = names.map(n=>`<option value="${n}"/>`).join('');
+  renderReviewList();
+}
+
+const ratingColor = {
+  'Excellent':'#4ecb8d','Above Average':'#7eb8f5','Average':'#9fb5cc',
+  'Below Average':'#c4935a','Well Below Average':'#d47070'
+};
+
+function renderReviewList(){
+  const byPlayer = {};
+  allReviewsFlat.forEach(r=>{if(!byPlayer[r.player])byPlayer[r.player]=[];byPlayer[r.player].push(r);});
+  document.getElementById('reviewList').innerHTML = Object.entries(byPlayer).map(([player, reviews])=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">${player}</div>
+      ${reviews.map(r=>`
+        <div class="round-row">
+          <span class="round-short">${r.rd}</span>
+          <span style="flex:1;font-size:12px;color:${ratingColor[r.rating]||'var(--muted)'}">${r.rating}</span>
+          <button class="edit-btn" onclick='editReview(${JSON.stringify(player)},${JSON.stringify(r)})'>Edit</button>
+          <button class="del-btn" onclick='deleteReview(${JSON.stringify(player)},${JSON.stringify(r.rd)})'>✕</button>
+        </div>
+      `).join('')}
+    </div>
+  `).join('') || '<div style="color:var(--muted);font-size:13px">No reviews yet</div>';
+}
+
+function clearReviewForm(){
+  ['rv-player','rv-round','rv-rdlabel','rv-comment'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rv-rating').value='Average';
+  editingReview=null;
+  document.getElementById('reviewFormTitle').textContent='Add / Edit Player Review';
+  document.getElementById('cancelReviewBtn').style.display='none';
+}
+function cancelReviewEdit(){ clearReviewForm(); }
+
+function editReview(player, r){
+  editingReview = {player, rd: r.rd};
+  document.getElementById('rv-player').value = player;
+  // parse round number from label e.g. "Rd 9" → 9
+  const m = r.rd.match(/\d+/);
+  document.getElementById('rv-round').value = m ? m[0] : '';
+  document.getElementById('rv-rdlabel').value = r.rd;
+  document.getElementById('rv-rating').value = r.rating;
+  document.getElementById('rv-comment').value = r.comment;
+  document.getElementById('reviewFormTitle').textContent = 'Edit '+player+' — '+r.rd;
+  document.getElementById('cancelReviewBtn').style.display='inline-block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+async function saveReview(){
+  const player = document.getElementById('rv-player').value.trim();
+  const roundNum = parseInt(document.getElementById('rv-round').value);
+  const rdLabel = document.getElementById('rv-rdlabel').value.trim();
+  const rating = document.getElementById('rv-rating').value;
+  const comment = document.getElementById('rv-comment').value.trim();
+  if(!player||!roundNum||!rdLabel||!comment){ showMsg('reviewMsg','All fields are required','err'); return; }
+  const res = await fetch('/api/admin/reviews',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({player_name:player,round_num:roundNum,round_label:rdLabel,rating,comment})});
+  if(res.ok){ showMsg('reviewMsg','Review saved!','ok'); clearReviewForm(); loadReviews(); }
+  else showMsg('reviewMsg','Error saving review','err');
+}
+
+async function deleteReview(player, rdLabel){
+  if(!confirm('Delete '+player+' '+rdLabel+'?')) return;
+  const m = rdLabel.match(/\d+/);
+  if(!m) return;
+  await fetch('/api/admin/reviews/'+encodeURIComponent(player)+'/'+m[0],{method:'DELETE',headers:{'x-admin-token':token}});
+  loadReviews();
+}
+
+function showMsg(id, text, type){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg '+type;
+  el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3000);
+}
+</script>
+</body>
+</html>
