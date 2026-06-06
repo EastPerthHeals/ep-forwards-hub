@@ -15,7 +15,9 @@
   --c-red:#e07070;--c-orange:#e8a040;--c-green:#4ecb8d;--c-purple:#b07fe8;
   --font:'Segoe UI',system-ui,-apple-system,sans-serif;
 }
-body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font);min-height:100vh}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;}
+.page,.header,.nav{position:relative;z-index:1;}
 .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
 .header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .header-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-primary)}
