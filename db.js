@@ -1,7 +1,29 @@
-const fs = require('fs');
-const path = require('path');
+const { MongoClient } = require('mongodb');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data.json');
+const MONGO_URI = process.env.MONGO_URI;
+const DB_NAME = process.env.MONGO_DB_NAME || 'ep_forwards_hub';
+
+let client;
+let db;
+
+async function connect() {
+  if (db) return db;
+  if (!MONGO_URI) throw new Error('MONGO_URI environment variable is not set');
+  client = new MongoClient(MONGO_URI);
+  await client.connect();
+  db = client.db(DB_NAME);
+
+  // seed if empty (first-ever run)
+  const roundsCount = await db.collection('rounds').countDocuments();
+  if (roundsCount === 0) {
+    await db.collection('rounds').insertMany(SEED.rounds);
+  }
+  const reviewsCount = await db.collection('reviews').countDocuments();
+  if (reviewsCount === 0) {
+    await db.collection('reviews').insertMany(SEED.reviews);
+  }
+  return db;
+}
 
 const SEED = {
   rounds: [
@@ -50,16 +72,23 @@ const SEED = {
   ]
 };
 
-function load() {
-  if (!fs.existsSync(DB_PATH)) {
-    fs.writeFileSync(DB_PATH, JSON.stringify(SEED, null, 2));
-    return JSON.parse(JSON.stringify(SEED));
-  }
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+async function load() {
+  const database = await connect();
+  const rounds = await database.collection('rounds').find({}, { projection: { _id: 0 } }).toArray();
+  const reviews = await database.collection('reviews').find({}, { projection: { _id: 0 } }).toArray();
+  return { rounds, reviews };
 }
 
-function save(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+async function save(data) {
+  const database = await connect();
+  await database.collection('rounds').deleteMany({});
+  if (data.rounds && data.rounds.length) {
+    await database.collection('rounds').insertMany(data.rounds.map(r => ({ ...r })));
+  }
+  await database.collection('reviews').deleteMany({});
+  if (data.reviews && data.reviews.length) {
+    await database.collection('reviews').insertMany(data.reviews.map(r => ({ ...r })));
+  }
 }
 
 module.exports = { load, save };

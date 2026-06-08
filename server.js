@@ -15,22 +15,32 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// small helper so we don't repeat try/catch everywhere
+function wrap(fn) {
+  return (req, res) => {
+    fn(req, res).catch(err => {
+      console.error(err);
+      res.status(500).json({ error: 'Server error', details: err.message });
+    });
+  };
+}
+
 // ── PUBLIC API ──────────────────────────────────────────────────────────────
 
-app.get('/api/rounds', (req, res) => {
-  const data = load();
+app.get('/api/rounds', wrap(async (req, res) => {
+  const data = await load();
   res.json(data.rounds.sort((a, b) => a.round_num - b.round_num));
-});
+}));
 
-app.get('/api/rounds/:num', (req, res) => {
-  const data = load();
+app.get('/api/rounds/:num', wrap(async (req, res) => {
+  const data = await load();
   const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
   if (!round) return res.status(404).json({ error: 'Not found' });
   res.json(round);
-});
+}));
 
-app.get('/api/players', (req, res) => {
-  const data = load();
+app.get('/api/players', wrap(async (req, res) => {
+  const data = await load();
   const grouped = {};
   const sorted = [...data.reviews].sort((a, b) => a.round_num - b.round_num);
   for (const r of sorted) {
@@ -45,7 +55,7 @@ app.get('/api/players', (req, res) => {
   const out = {};
   Object.keys(grouped).sort().forEach(k => out[k] = grouped[k]);
   res.json(out);
-});
+}));
 
 // ── LIVE GAME DAY API ────────────────────────────────────────────────────────
 
@@ -77,8 +87,8 @@ app.post('/api/gameday/reset', (req, res) => {
 
 // ── ADMIN API ───────────────────────────────────────────────────────────────
 
-app.post('/api/admin/rounds', requireAdmin, (req, res) => {
-  const data = load();
+app.post('/api/admin/rounds', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
   const d = req.body;
   const idx = data.rounds.findIndex(r => r.round_num === d.round_num);
   const round = {
@@ -107,19 +117,19 @@ app.post('/api/admin/rounds', requireAdmin, (req, res) => {
   };
   if (idx >= 0) data.rounds[idx] = round;
   else data.rounds.push(round);
-  save(data);
+  await save(data);
   res.json({ ok: true });
-});
+}));
 
-app.delete('/api/admin/rounds/:num', requireAdmin, (req, res) => {
-  const data = load();
+app.delete('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
   data.rounds = data.rounds.filter(r => r.round_num !== parseInt(req.params.num));
-  save(data);
+  await save(data);
   res.json({ ok: true });
-});
+}));
 
-app.post('/api/admin/reviews', requireAdmin, (req, res) => {
-  const data = load();
+app.post('/api/admin/reviews', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
   const d = req.body;
   const idx = data.reviews.findIndex(r => r.player_name === d.player_name && r.round_num === d.round_num);
   const review = {
@@ -131,23 +141,23 @@ app.post('/api/admin/reviews', requireAdmin, (req, res) => {
   };
   if (idx >= 0) data.reviews[idx] = review;
   else data.reviews.push(review);
-  save(data);
+  await save(data);
   res.json({ ok: true });
-});
+}));
 
-app.delete('/api/admin/reviews/:player/:round', requireAdmin, (req, res) => {
-  const data = load();
+app.delete('/api/admin/reviews/:player/:round', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
   const player = decodeURIComponent(req.params.player);
   const round = parseInt(req.params.round);
   data.reviews = data.reviews.filter(r => !(r.player_name === player && r.round_num === round));
-  save(data);
+  await save(data);
   res.json({ ok: true });
-});
+}));
 
-app.get('/api/admin/players-list', requireAdmin, (req, res) => {
-  const data = load();
+app.get('/api/admin/players-list', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
   const names = [...new Set(data.reviews.map(r => r.player_name))].sort();
   res.json(names);
-});
+}));
 
 app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));
