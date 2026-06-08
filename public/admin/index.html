@@ -79,6 +79,9 @@ select option{background:#1c2333}
 .remove-source{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
 .add-source-btn{background:none;border:1px dashed var(--border);color:var(--muted);font-size:11px;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:var(--font);margin-top:4px}
 .add-source-btn:hover{border-color:var(--accent);color:var(--accent-light)}
+.source-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.source-tile{background:var(--card-bg,rgba(255,255,255,0.04));border:1px solid var(--border);color:var(--text-primary,var(--muted));font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:border-color .15s,color .15s}
+.source-tile:hover{border-color:var(--accent);color:var(--accent-light)}
 </style>
 </head>
 <body>
@@ -112,37 +115,38 @@ select option{background:#1c2333}
       <div class="grid3">
         <div class="field"><label>Round number</label><input type="number" id="r-num" placeholder="9"/></div>
         <div class="field"><label>Short label</label><input type="text" id="r-short" placeholder="Rd 9"/></div>
-        <div class="field"><label>Opponent</label><input type="text" id="r-opp" placeholder="Claremont"/></div>
+        <div class="field"><label>Opponent</label><input type="text" id="r-opp" placeholder=""/></div>
       </div>
-      <div class="field"><label>Full label</label><input type="text" id="r-label" placeholder="Rd 9 · Claremont"/></div>
+      <div class="field"><label>Full label</label><input type="text" id="r-label" placeholder="Rd 9 - Opponent"/></div>
       <div class="grid2">
         <div class="field"><label>Result</label>
           <select id="r-wl"><option value="W">Win</option><option value="L">Loss</option><option value="D">Draw</option></select>
         </div>
-        <div class="field"><label>Force Rating (avg)</label><input type="number" id="r-force" placeholder="203"/></div>
+        <div class="field"><label>Force Rating (avg)</label><input type="number" id="r-force" placeholder=""/></div>
       </div>
 
-      <div class="section-label">Quarter force ratings (optional)</div>
+      <div class="section-label">Quarter force ratings</div>
       <div class="grid4">
-        <div class="field"><label>Q1</label><input type="number" id="r-q1" placeholder="210"/></div>
-        <div class="field"><label>Q2</label><input type="number" id="r-q2" placeholder="195"/></div>
-        <div class="field"><label>Q3</label><input type="number" id="r-q3" placeholder="215"/></div>
-        <div class="field"><label>Q4</label><input type="number" id="r-q4" placeholder="195"/></div>
+        <div class="field"><label>Q1</label><input type="number" id="r-q1" placeholder=""/></div>
+        <div class="field"><label>Q2</label><input type="number" id="r-q2" placeholder=""/></div>
+        <div class="field"><label>Q3</label><input type="number" id="r-q3" placeholder=""/></div>
+        <div class="field"><label>Q4</label><input type="number" id="r-q4" placeholder=""/></div>
       </div>
 
       <div class="section-label">Metrics</div>
       <div class="grid3">
-        <div class="field"><label>Inside 50s (avg/qtr)</label><input type="number" id="r-i50" placeholder="12"/></div>
-        <div class="field"><label>% Scores I50</label><input type="number" id="r-scores" placeholder="52"/></div>
-        <div class="field"><label>% Accuracy</label><input type="number" id="r-acc" placeholder="60"/></div>
-        <div class="field"><label>% Tackles I50</label><input type="number" id="r-tack" placeholder="24"/></div>
-        <div class="field"><label>% Marks I50</label><input type="number" id="r-marks" placeholder="24"/></div>
-        <div class="field"><label>% Oppo R50</label><input type="number" id="r-oppo" placeholder="25"/></div>
+        <div class="field"><label>Inside 50s (avg/qtr)</label><input type="number" id="r-i50" placeholder=""/></div>
+        <div class="field"><label>% Scores I50</label><input type="number" id="r-scores" placeholder=""/></div>
+        <div class="field"><label>% Accuracy</label><input type="number" id="r-acc" placeholder=""/></div>
+        <div class="field"><label>% Tackles I50</label><input type="number" id="r-tack" placeholder=""/></div>
+        <div class="field"><label>% Marks I50</label><input type="number" id="r-marks" placeholder=""/></div>
+        <div class="field"><label>% Oppo R50</label><input type="number" id="r-oppo" placeholder=""/></div>
       </div>
 
       <div class="section-label">Score sources</div>
+      <div class="source-tiles" id="sourceTiles"></div>
       <div class="sources-list" id="sourcesList"></div>
-      <button class="add-source-btn" onclick="addSource()">+ Add source</button>
+      <button class="add-source-btn" onclick="addSource()">+ Add custom source</button>
 
       <div class="section-label">Notes</div>
       <div class="field"><label>Things we learned</label><textarea id="r-learned" placeholder="What did we learn this round?"></textarea></div>
@@ -150,9 +154,9 @@ select option{background:#1c2333}
 
       <div class="section-label">Intercept goals</div>
       <div class="grid3">
-        <div class="field"><label>Forwards</label><input type="number" id="r-if" placeholder="3"/></div>
-        <div class="field"><label>Backs</label><input type="number" id="r-ib" placeholder="2"/></div>
-        <div class="field"><label>Mids</label><input type="number" id="r-im" placeholder="1"/></div>
+        <div class="field"><label>Forwards</label><input type="number" id="r-if" placeholder=""/></div>
+        <div class="field"><label>Backs</label><input type="number" id="r-ib" placeholder=""/></div>
+        <div class="field"><label>Mids</label><input type="number" id="r-im" placeholder=""/></div>
       </div>
 
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
@@ -232,6 +236,7 @@ function switchTab(name, btn){
 }
 
 async function loadAdmin(){
+  renderSourceTiles();
   await Promise.all([loadRounds(), loadReviews()]);
 }
 
@@ -277,6 +282,33 @@ function addSource(name='', count=''){
   li.className = 'source-item';
   li.innerHTML = `<input type="text" placeholder="Source name" value="${name}"/><input type="number" placeholder="Count" value="${count}" style="width:70px"/><button class="remove-source" onclick="this.parentElement.remove()">×</button>`;
   document.getElementById('sourcesList').appendChild(li);
+}
+
+const SCORE_SOURCE_OPTIONS = [
+  'Free Kick',
+  'Front and Centre',
+  'CBD (BM)',
+  'Ball Movement',
+  'Surge (HBR)',
+  'Surge (Mark)',
+  'Forward 1/2 Intercept',
+  'F50 Stop (Incl. Free Kicks)'
+];
+
+function renderSourceTiles(){
+  const wrap = document.getElementById('sourceTiles');
+  if(!wrap) return;
+  wrap.innerHTML = SCORE_SOURCE_OPTIONS.map(name =>
+    `<button type="button" class="source-tile" onclick="addSourceFromTile('${name.replace(/'/g,"\\'")}')">${name}</button>`
+  ).join('');
+}
+
+function addSourceFromTile(name){
+  const count = prompt(`How many "${name}" score sources for this round?`);
+  if(count === null) return;
+  const num = parseInt(count);
+  if(isNaN(num)) return;
+  addSource(name, num);
 }
 
 function clearRoundForm(){
