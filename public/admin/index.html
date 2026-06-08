@@ -306,7 +306,7 @@ async function loadAdmin(){
 let allRounds = [];
 
 async function loadRounds(){
-  allRounds = await fetch('/api/rounds').then(r=>r.json());
+  allRounds = await fetch('/api/rounds',{headers:{'x-admin-token':token}}).then(r=>r.json());
   renderRoundList();
 }
 
@@ -454,7 +454,7 @@ async function deleteRound(num, label){
 let allReviewsFlat = [];
 
 async function loadReviews(){
-  const data = await fetch('/api/players').then(r=>r.json());
+  const data = await fetch('/api/players',{headers:{'x-admin-token':token}}).then(r=>r.json());
   // flatten for display
   allReviewsFlat = [];
   Object.entries(data).forEach(([player, d])=>{

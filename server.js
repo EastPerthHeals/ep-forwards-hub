@@ -17,6 +17,10 @@ function requireAdmin(req, res, next) {
 
 async function requireSiteAccess(req, res, next) {
   try {
+    // Admins are always allowed through (e.g. the admin panel loading round/review data)
+    const adminToken = req.headers['x-admin-token'] || req.query.token;
+    if (adminToken === ADMIN_PASSWORD) return next();
+
     const supplied = req.headers['x-site-password'] || req.query.sitePassword;
     const current = await getSitePassword();
     if (supplied !== current) return res.status(401).json({ error: 'Site locked' });
