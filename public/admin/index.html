@@ -57,6 +57,9 @@ select option{background:#1c2333}
 .msg{font-size:12px;padding:8px 12px;border-radius:6px;margin-top:12px;display:none}
 .msg.ok{background:rgba(59,158,110,0.15);color:var(--green);border:1px solid rgba(59,158,110,0.3)}
 .msg.err{background:rgba(192,57,43,0.15);color:var(--red);border:1px solid rgba(192,57,43,0.3)}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--green,#3b9e6e);color:#fff;font-size:13px;font-weight:600;padding:14px 26px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.35);z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s ease, transform .25s ease;display:flex;align-items:center;gap:10px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red,#c0392b)}
 
 /* round list */
 .round-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px}
@@ -85,6 +88,7 @@ select option{background:#1c2333}
 </style>
 </head>
 <body>
+<div class="toast" id="toast"></div>
 <div class="header">
   <div class="header-dot"></div>
   <div><span class="header-title">East Perth FC</span><span class="header-sub">Admin</span></div>
@@ -395,10 +399,12 @@ async function saveAnalysisVisibility(){
     if(res.ok){
       msg.textContent = 'Saved! The public dashboard will now only show the metrics you\'ve ticked.';
       msg.className = 'msg ok';
+      showToast('Publishing choices saved!');
       analysisAdminVisible = checked;
     } else {
       msg.textContent = 'Could not save — try again.';
       msg.className = 'msg err';
+      showToast('Could not save — try again.','err');
     }
   }catch(e){
     msg.textContent = 'Server error — try again.';
@@ -587,8 +593,8 @@ async function saveRound(){
   };
   if(!payload.force_avg){ showMsg('roundMsg','Force Rating (avg) is required','err'); return; }
   const res = await fetch('/api/admin/rounds', {method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify(payload)});
-  if(res.ok){ showMsg('roundMsg','Round saved!','ok'); clearRoundForm(); loadRounds(); }
-  else showMsg('roundMsg','Error saving round','err');
+  if(res.ok){ showMsg('roundMsg','Round saved!','ok'); showToast('Round saved!'); clearRoundForm(); loadRounds(); }
+  else { showMsg('roundMsg','Error saving round','err'); showToast('Error saving round','err'); }
 }
 
 async function deleteRound(num, label){
@@ -686,6 +692,15 @@ function showMsg(id, text, type){
   el.className = 'msg '+type;
   el.style.display = 'block';
   setTimeout(()=>el.style.display='none', 3000);
+}
+
+let toastTimer = null;
+function showToast(text, type){
+  const el = document.getElementById('toast');
+  clearTimeout(toastTimer);
+  el.textContent = text;
+  el.className = 'toast show'+(type==='err' ? ' err' : '');
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2600);
 }
 </script>
 </body>
