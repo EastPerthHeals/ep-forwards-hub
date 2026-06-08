@@ -115,4 +115,32 @@ async function setSitePassword(newPassword) {
   );
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword };
+// All analysis metric keys — used as the default "fully visible" state
+const ALL_ANALYSIS_KEYS = [
+  'pct_scores_i50','pct_marks_i50','pct_accuracy','pct_tackles_i50',
+  'pct_oppo_r50','i50','force_avg','intercept_fwds','intercept_backs','intercept_mids'
+];
+
+async function getAnalysisVisible() {
+  const database = await connect();
+  const doc = await database.collection('settings').findOne({ _id: 'analysisVisibility' });
+  if (doc && Array.isArray(doc.visible)) return doc.visible;
+  // first run — publish everything by default
+  await database.collection('settings').updateOne(
+    { _id: 'analysisVisibility' },
+    { $set: { visible: ALL_ANALYSIS_KEYS } },
+    { upsert: true }
+  );
+  return ALL_ANALYSIS_KEYS;
+}
+
+async function setAnalysisVisible(keys) {
+  const database = await connect();
+  await database.collection('settings').updateOne(
+    { _id: 'analysisVisibility' },
+    { $set: { visible: Array.isArray(keys) ? keys : [] } },
+    { upsert: true }
+  );
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS };

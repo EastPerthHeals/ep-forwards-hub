@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { load, save, getSitePassword, setSitePassword } = require('./db');
+const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +60,11 @@ app.get('/api/rounds/:num', requireSiteAccess, wrap(async (req, res) => {
   const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
   if (!round) return res.status(404).json({ error: 'Not found' });
   res.json(round);
+}));
+
+app.get('/api/analysis-settings', requireSiteAccess, wrap(async (req, res) => {
+  const visible = await getAnalysisVisible();
+  res.json({ visible });
 }));
 
 app.get('/api/players', requireSiteAccess, wrap(async (req, res) => {
@@ -192,6 +197,17 @@ app.post('/api/admin/site-password', requireAdmin, wrap(async (req, res) => {
   const newPassword = (req.body && req.body.password || '').trim();
   if (!newPassword) return res.status(400).json({ error: 'Password cannot be empty' });
   await setSitePassword(newPassword);
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/analysis-settings', requireAdmin, wrap(async (req, res) => {
+  const visible = await getAnalysisVisible();
+  res.json({ visible });
+}));
+
+app.post('/api/admin/analysis-settings', requireAdmin, wrap(async (req, res) => {
+  const visible = (req.body && req.body.visible) || [];
+  await setAnalysisVisible(visible);
   res.json({ ok: true });
 }));
 

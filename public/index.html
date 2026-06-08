@@ -432,10 +432,13 @@ let allRounds=[], allPlayers={};
 let seasonChart=null, wlChart=null, kpiChart=null;
 
 async function loadData(){
-  [allRounds, allPlayers] = await Promise.all([
+  let visSettings;
+  [allRounds, allPlayers, visSettings] = await Promise.all([
     siteFetch('/api/rounds').then(r=>r.json()),
-    siteFetch('/api/players').then(r=>r.json())
+    siteFetch('/api/players').then(r=>r.json()),
+    siteFetch('/api/analysis-settings').then(r=>r.json()).catch(()=>({visible:[]}))
   ]);
+  analysisVisibleKeys = (visSettings && Array.isArray(visSettings.visible)) ? visSettings.visible : [];
   renderGD();
   renderSeasonSummary();
   renderMetricTable();
@@ -570,6 +573,8 @@ function linkLabel(r){
   return {text:'No clear link', cls:'analysis-neutral'};
 }
 
+let analysisVisibleKeys = null; // null = not yet loaded; array = published metric keys
+
 function renderAnalysis(){
   const intro = document.getElementById('analysisIntro');
   const tbody = document.getElementById('analysisTableBody');
@@ -587,9 +592,19 @@ function renderAnalysis(){
     return;
   }
 
+  const visibleKeys = analysisVisibleKeys || [];
+  const visibleMetrics = ANALYSIS_METRICS.filter(m=>visibleKeys.includes(m.key));
+
+  if(!visibleMetrics.length){
+    intro.textContent='The coach hasn\'t published any analysis for this season yet — check back soon.';
+    tbody.innerHTML='';
+    takeaways.innerHTML='';
+    return;
+  }
+
   intro.textContent='Based on '+decided.length+' completed rounds this season ('+wins+' wins, '+losses+' losses), here is how each KPI relates to winning. The bigger the gap between the win and loss averages — and the stronger the correlation — the more that metric seems to matter to the result.';
 
-  const results = ANALYSIS_METRICS.map(m=>{
+  const results = visibleMetrics.map(m=>{
     const pts = decided.filter(r=>r[m.key]!==null && r[m.key]!==undefined);
     if(pts.length<4) return null;
     const xs = pts.map(r=>r[m.key]);
