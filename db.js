@@ -91,4 +91,28 @@ async function save(data) {
   }
 }
 
-module.exports = { load, save };
+const DEFAULT_SITE_PASSWORD = process.env.SITE_PASSWORD || 'forwards2026';
+
+async function getSitePassword() {
+  const database = await connect();
+  const doc = await database.collection('settings').findOne({ _id: 'site' });
+  if (doc && doc.password) return doc.password;
+  // first run — store the default so it's consistent across restarts
+  await database.collection('settings').updateOne(
+    { _id: 'site' },
+    { $set: { password: DEFAULT_SITE_PASSWORD } },
+    { upsert: true }
+  );
+  return DEFAULT_SITE_PASSWORD;
+}
+
+async function setSitePassword(newPassword) {
+  const database = await connect();
+  await database.collection('settings').updateOne(
+    { _id: 'site' },
+    { $set: { password: newPassword } },
+    { upsert: true }
+  );
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword };

@@ -106,6 +106,7 @@ select option{background:#1c2333}
   <div class="tabs">
     <button class="tab active" onclick="switchTab('rounds',this)">Rounds</button>
     <button class="tab" onclick="switchTab('reviews',this)">Player Reviews</button>
+    <button class="tab" onclick="switchTab('access',this)">Site Access</button>
   </div>
 
   <!-- ROUNDS PANEL -->
@@ -206,6 +207,27 @@ select option{background:#1c2333}
     <div class="section-label">Existing reviews</div>
     <div id="reviewList"></div>
   </div>
+
+  <!-- SITE ACCESS PANEL -->
+  <div class="panel" id="panel-access">
+    <div class="card">
+      <div class="card-title">Whole-Site Access Password</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        The entire dashboard is locked behind this single password — anyone who wants to view it
+        (players, staff, guests) must enter it first. Change it any time to instantly cut off
+        access for anyone who currently has the old password. Share the new one only with people
+        you want to be able to view the site right now.
+      </p>
+      <div class="field"><label>Current password</label>
+        <input type="text" id="site-pw-current" readonly style="opacity:0.7"/>
+      </div>
+      <div class="field"><label>New password</label>
+        <input type="text" id="site-pw-new" placeholder="Enter a new access password"/>
+      </div>
+      <button class="btn" onclick="saveSitePassword()">Update Password</button>
+      <div class="msg" id="sitePwMsg"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -233,6 +255,45 @@ function switchTab(name, btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
+  if(name==='access') loadSitePassword();
+}
+
+async function loadSitePassword(){
+  const msg = document.getElementById('sitePwMsg');
+  try{
+    const res = await fetch('/api/admin/site-password',{headers:{'x-admin-token':token}}).then(r=>r.json());
+    document.getElementById('site-pw-current').value = res.password || '';
+  }catch(e){
+    msg.textContent = 'Could not load current password.';
+    msg.className = 'msg err';
+  }
+}
+
+async function saveSitePassword(){
+  const msg = document.getElementById('sitePwMsg');
+  const newPw = document.getElementById('site-pw-new').value.trim();
+  if(!newPw){ msg.textContent='Enter a new password first.'; msg.className='msg err'; return; }
+  msg.textContent = 'Saving...';
+  msg.className = 'msg';
+  try{
+    const res = await fetch('/api/admin/site-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({password:newPw})
+    });
+    if(res.ok){
+      msg.textContent = 'Password updated! Anyone with the old password is now locked out — share the new one with whoever should have access.';
+      msg.className = 'msg ok';
+      document.getElementById('site-pw-new').value='';
+      loadSitePassword();
+    } else {
+      msg.textContent = 'Could not update password.';
+      msg.className = 'msg err';
+    }
+  }catch(e){
+    msg.textContent = 'Server error — try again.';
+    msg.className = 'msg err';
+  }
 }
 
 async function loadAdmin(){

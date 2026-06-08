@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { load, save } = require('./db');
+const { load, save, getSitePassword, setSitePassword } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +15,25 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+async function requireSiteAccess(req, res, next) {
+  try {
+    const supplied = req.headers['x-site-password'] || req.query.sitePassword;
+    const current = await getSitePassword();
+    if (supplied !== current) return res.status(401).json({ error: 'Site locked' });
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+}
+
+// Lets the lock screen check a password without needing any other data
+app.post('/api/site-login', wrap(async (req, res) => {
+  const supplied = (req.body && req.body.password) || '';
+  const current = await getSitePassword();
+  res.json({ ok: supplied === current });
+}));
+
 // small helper so we don't repeat try/catch everywhere
 function wrap(fn) {
   return (req, res) => {
@@ -27,19 +46,19 @@ function wrap(fn) {
 
 // ── PUBLIC API ──────────────────────────────────────────────────────────────
 
-app.get('/api/rounds', wrap(async (req, res) => {
+app.get('/api/rounds', requireSiteAccess, wrap(async (req, res) => {
   const data = await load();
   res.json(data.rounds.sort((a, b) => a.round_num - b.round_num));
 }));
 
-app.get('/api/rounds/:num', wrap(async (req, res) => {
+app.get('/api/rounds/:num', requireSiteAccess, wrap(async (req, res) => {
   const data = await load();
   const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
   if (!round) return res.status(404).json({ error: 'Not found' });
   res.json(round);
 }));
 
-app.get('/api/players', wrap(async (req, res) => {
+app.get('/api/players', requireSiteAccess, wrap(async (req, res) => {
   const data = await load();
   const grouped = {};
   const sorted = [...data.reviews].sort((a, b) => a.round_num - b.round_num);
@@ -66,16 +85,16 @@ let liveGameDay = [
   {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
 ];
 
-app.get('/api/gameday', (req, res) => {
+app.get('/api/gameday', requireSiteAccess, (req, res) => {
   res.json(liveGameDay);
 });
 
-app.post('/api/gameday', (req, res) => {
+app.post('/api/gameday', requireSiteAccess, (req, res) => {
   liveGameDay = req.body;
   res.json({ ok: true });
 });
 
-app.post('/api/gameday/reset', (req, res) => {
+app.post('/api/gameday/reset', requireSiteAccess, (req, res) => {
   liveGameDay = [
     {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
     {i50:'',score:'',tackles:'',marks:'',oppoR50:''},
@@ -158,6 +177,18 @@ app.get('/api/admin/players-list', requireAdmin, wrap(async (req, res) => {
   const data = await load();
   const names = [...new Set(data.reviews.map(r => r.player_name))].sort();
   res.json(names);
+}));
+
+app.get('/api/admin/site-password', requireAdmin, wrap(async (req, res) => {
+  const password = await getSitePassword();
+  res.json({ password });
+}));
+
+app.post('/api/admin/site-password', requireAdmin, wrap(async (req, res) => {
+  const newPassword = (req.body && req.body.password || '').trim();
+  if (!newPassword) return res.status(400).json({ error: 'Password cannot be empty' });
+  await setSitePassword(newPassword);
+  res.json({ ok: true });
 }));
 
 app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));

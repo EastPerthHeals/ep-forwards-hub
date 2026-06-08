@@ -16,6 +16,15 @@
   --font:'Segoe UI',system-ui,-apple-system,sans-serif;
 }
 body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font);min-height:100vh;}
+.lock-overlay{position:fixed;inset:0;background:var(--bg-base);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-box{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:32px;max-width:340px;width:100%;text-align:center}
+.lock-box img{height:56px;margin-bottom:16px}
+.lock-box h2{font-size:15px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px;color:var(--text-primary)}
+.lock-box input{width:100%;padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-size:14px;font-family:var(--font);margin-bottom:12px}
+.lock-box input:focus{outline:none;border-color:var(--accent)}
+.lock-box button{width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:var(--font)}
+.lock-box button:hover{background:var(--accent-light)}
+.lock-error{color:var(--c-red);font-size:12px;margin-top:10px;min-height:16px}
 body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;}
 .page,.header,.nav{position:relative;z-index:1;}
 .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
@@ -146,6 +155,15 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </style>
 </head>
 <body>
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-box">
+    <img src="/logo.png" alt="East Perth FC"/>
+    <h2>Enter Access Password</h2>
+    <input type="password" id="lockPassword" placeholder="Password" onkeydown="if(event.key==='Enter')trySiteLogin()"/>
+    <button onclick="trySiteLogin()">Enter</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
 <div class="header">
   <img src="/logo.png" alt="East Perth FC" style="height:42px;width:auto;"/>
   <div><span class="header-title">East Perth FC</span><span class="header-sub">Forwards Hub &middot; 2026</span></div>
@@ -256,6 +274,60 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </div>
 
 <script>
+// ── SITE LOCK ────────────────────────────────────────────────────────────────
+const SITE_PW_KEY = 'ep_site_password';
+
+function siteFetch(url, opts={}){
+  const pw = localStorage.getItem(SITE_PW_KEY) || '';
+  opts.headers = Object.assign({}, opts.headers, {'x-site-password': pw});
+  return fetch(url, opts).then(r=>{
+    if(r.status===401){ showLock('Session expired — please re-enter the password.'); throw new Error('locked'); }
+    return r;
+  });
+}
+
+function showLock(msg=''){
+  document.getElementById('lockOverlay').style.display='flex';
+  document.getElementById('lockError').textContent=msg;
+  localStorage.removeItem(SITE_PW_KEY);
+}
+function hideLock(){
+  document.getElementById('lockOverlay').style.display='none';
+}
+
+async function trySiteLogin(){
+  const pw = document.getElementById('lockPassword').value;
+  const err = document.getElementById('lockError');
+  err.textContent='Checking...';
+  try{
+    const res = await fetch('/api/site-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})}).then(r=>r.json());
+    if(res.ok){
+      localStorage.setItem(SITE_PW_KEY, pw);
+      err.textContent='';
+      hideLock();
+      boot();
+    } else {
+      err.textContent='Incorrect password — please try again.';
+    }
+  }catch(e){
+    err.textContent='Could not reach the server. Try again.';
+  }
+}
+
+async function checkSiteAccess(){
+  const stored = localStorage.getItem(SITE_PW_KEY);
+  if(!stored){ showLock(); return false; }
+  try{
+    const res = await fetch('/api/site-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:stored})}).then(r=>r.json());
+    if(res.ok){ hideLock(); return true; }
+    showLock('Please enter the current access password.');
+    return false;
+  }catch(e){
+    showLock('Could not reach the server. Try again.');
+    return false;
+  }
+}
+
 const T={i50:{r:9,o:11,g:14},scoresI50:{r:39,o:49,g:69},accuracy:{r:44,o:59,g:74},tacklesI50:{r:17,o:23,g:31},marksI50:{r:17,o:23,g:34},oppoR50:{r:18,o:24,g:34},force:{r:176,o:194,g:224}};
 const C={red:'#e07070',orange:'#e8a040',green:'#4ecb8d',purple:'#b07fe8',muted:'rgba(136,153,180,0.55)'};
 const BAR={red:'#b03030',orange:'#9a6010',green:'#2e7d5e',purple:'#6a3fa0'};
@@ -287,8 +359,8 @@ function calcQtr(q){
 
 function updateGD(){const calcs=gd.map(q=>calcQtr(q));const valid=calcs.filter(c=>c!==null);calcs.forEach((c,i)=>{const sE=document.getElementById('gd-qscore-'+i),vE=document.getElementById('gd-qvs-'+i),crd=document.getElementById('gd-card-'+i),clE=document.getElementById('gd-calcs-'+i);if(!sE)return;if(c&&c.force!==undefined){const d=c.force-195;sE.textContent=c.force;sE.style.color=col('force',c.force);vE.textContent=(d>=0?'+':'')+d+' vs target';vE.style.color=d>=0?C.green:C.red;crd.classList.add('has-data');}else if(c){sE.textContent='...';sE.style.color=C.muted;vE.textContent='fill all fields';vE.style.color=C.muted;crd.classList.add('has-data');}else{sE.textContent='--';sE.style.color=C.muted;vE.textContent='';crd.classList.remove('has-data');}if(clE&&c){const rows=[{l:'Inside 50s',v:c.i50,k:'i50',u:''},{l:'% Scores I50',v:c.scoresI50,k:'scoresI50',u:'%'},{l:'Accuracy %',v:c.accuracy,k:'accuracy',u:'%'},{l:'% Tackles I50',v:c.tacklesI50,k:'tacklesI50',u:'%'},{l:'% Marks I50',v:c.marksI50,k:'marksI50',u:'%'},{l:'% Oppo R50',v:c.oppoR50,k:'oppoR50',u:'%'}];clE.innerHTML=rows.map(r=>'<div class="gd-calc-row"><span class="gd-calc-label">'+r.l+'</span><span class="gd-calc-val" style="color:'+(r.v!==undefined?col(r.k,r.v):C.muted)+'">'+(r.v!==undefined?r.v.toFixed(1)+r.u:'--')+'</span></div>').join('');}else if(clE){clE.innerHTML='';}});const fE=document.getElementById('gd-force-num'),sE2=document.getElementById('gd-force-sub'),bE=document.getElementById('gd-breakdown');const wf=valid.filter(c=>c.force!==undefined);if(!wf.length){fE.textContent='--';fE.style.color=C.muted;sE2.textContent='Enter stats below';bE.innerHTML='';return;}const avg=Math.round(wf.reduce((a,c)=>a+c.force,0)/wf.length);fE.textContent=avg;fE.style.color=col('force',avg);sE2.textContent=wf.length+' qtr avg · '+(avg-195>=0?'+':'')+(avg-195)+' vs target';const bkm=[{label:'Inside 50s',key:'i50',tgt:12,unit:''},{label:'% Scores I50',key:'scoresI50',tgt:50,unit:'%'},{label:'Accuracy %',key:'accuracy',tgt:60,unit:'%'},{label:'% Tackles I50',key:'tacklesI50',tgt:24,unit:'%'},{label:'% Marks I50',key:'marksI50',tgt:24,unit:'%'},{label:'% Oppo R50',key:'oppoR50',tgt:25,unit:'%'}];bE.innerHTML=bkm.map(m=>{const vals=valid.map(c=>c[m.key]).filter(v=>v!==undefined);if(!vals.length)return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+C.muted+'">--</span><span class="gd-bk-tgt">tgt '+m.tgt+m.unit+'</span></div><div class="gd-bar"></div></div>';const a=Math.round(vals.reduce((x,y)=>x+y,0)/vals.length*10)/10;return'<div class="gd-bk-card"><div class="gd-bk-label">'+m.label+'</div><div class="gd-bk-vals"><span class="gd-bk-val" style="color:'+col(m.key,a)+'">'+a+m.unit+'</span><span class="gd-bk-tgt">tgt '+m.tgt+m.unit+'</span></div><div class="gd-bar"><div class="gd-bar-fill" style="width:'+barPct(m.key,a)+'%;background:'+barCol(m.key,a)+'"></div></div></div>';}).join('');}
 function onInput(q,f,v){gd[q][f]=v;updateGD();saveGameDay();}
-function saveGameDay(){fetch('/api/gameday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gd)});}
-function resetGD(){gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];fetch('/api/gameday/reset',{method:'POST'});renderGD();}
+function saveGameDay(){siteFetch('/api/gameday',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(gd)});}
+function resetGD(){gd=[EMPTY(),EMPTY(),EMPTY(),EMPTY()];siteFetch('/api/gameday/reset',{method:'POST'});renderGD();}
 
 function toggleStatMode(){
   isStatMode=!isStatMode;
@@ -317,7 +389,7 @@ async function startPolling(){
   if(pollInterval)clearInterval(pollInterval);
   pollInterval=setInterval(async()=>{
     if(isStatMode)return;
-    const data=await fetch('/api/gameday').then(r=>r.json());
+    const data=await siteFetch('/api/gameday').then(r=>r.json());
     gd=data;
     updateGD();
     // update input values without re-rendering
@@ -341,8 +413,8 @@ let seasonChart=null, wlChart=null, kpiChart=null;
 
 async function loadData(){
   [allRounds, allPlayers] = await Promise.all([
-    fetch('/api/rounds').then(r=>r.json()),
-    fetch('/api/players').then(r=>r.json())
+    siteFetch('/api/rounds').then(r=>r.json()),
+    siteFetch('/api/players').then(r=>r.json())
   ]);
   renderGD();
   renderSeasonSummary();
@@ -459,12 +531,16 @@ function renderTeamContent(i){
   document.getElementById('teamContent').innerHTML=h;
 }
 
-loadData().then(()=>{
-  // start in viewer mode by default — inputs disabled, polling active
-  document.querySelectorAll('#gd-qtrs input').forEach(inp=>inp.disabled=true);
-  document.getElementById('viewerBanner').style.display='block';
-  startPolling();
-});
+function boot(){
+  loadData().then(()=>{
+    // start in viewer mode by default — inputs disabled, polling active
+    document.querySelectorAll('#gd-qtrs input').forEach(inp=>inp.disabled=true);
+    document.getElementById('viewerBanner').style.display='block';
+    startPolling();
+  });
+}
+
+checkSiteAccess().then(ok=>{ if(ok) boot(); });
 </script>
 </body>
 </html>
