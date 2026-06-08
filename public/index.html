@@ -25,6 +25,10 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font)
 .lock-box button{width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:var(--font)}
 .lock-box button:hover{background:var(--accent-light)}
 .lock-error{color:var(--c-red);font-size:12px;margin-top:10px;min-height:16px}
+.analysis-tag{display:inline-block;font-size:10px;letter-spacing:0.5px;padding:4px 10px;border-radius:20px;font-weight:600;white-space:nowrap}
+.analysis-good{background:rgba(78,203,141,0.12);color:var(--c-green);border:1px solid rgba(78,203,141,0.3)}
+.analysis-bad{background:rgba(224,112,112,0.12);color:var(--c-red);border:1px solid rgba(224,112,112,0.3)}
+.analysis-neutral{background:rgba(136,153,180,0.1);color:var(--text-muted);border:1px solid var(--border)}
 body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;}
 .page,.header,.nav{position:relative;z-index:1;}
 .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
@@ -173,6 +177,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn active" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" onclick="showPage('season',this)">Season Tracker</button>
   <button class="nav-btn" onclick="showPage('kpi',this)">KPI Targets</button>
+  <button class="nav-btn" onclick="showPage('analysis',this)">Analysis</button>
   <button class="nav-btn" onclick="showPage('gameday',this)">&#9679; Game Day</button>
 </div>
 
@@ -271,6 +276,21 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <p class="section-label" style="margin-bottom:6px">Force rating &mdash; season trend vs target (195)</p>
   <div class="chart-legend"><span><span class="legend-dot" style="background:#3b9e6e"></span>Win</span><span><span class="legend-dot" style="background:#b03030"></span>Loss</span></div>
   <div class="chart-wrapper"><canvas id="kpiChart"></canvas></div>
+</div>
+
+<!-- ANALYSIS -->
+<div id="page-analysis" class="page">
+  <p class="section-label" style="margin-bottom:6px">What the numbers say about winning</p>
+  <p class="hint" id="analysisIntro">Analysing your season so far...</p>
+  <div id="analysisTakeaways"></div>
+  <p class="section-label" style="margin:24px 0 12px">Win vs loss &mdash; average by metric</p>
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px;overflow-x:auto">
+    <table class="kpi-table" id="analysisTable">
+      <thead><tr><th>Metric</th><th style="text-align:center">Win average</th><th style="text-align:center">Loss average</th><th style="text-align:center">Difference</th><th style="text-align:center">Link to winning</th></tr></thead>
+      <tbody id="analysisTableBody"></tbody>
+    </table>
+  </div>
+  <p class="hint">This updates automatically as you add more rounds &mdash; the more games in the database, the more reliable these patterns become. "Link to winning" is based on a statistical correlation between each metric and match results across all completed rounds (win/loss only, draws excluded).</p>
 </div>
 
 <script>
@@ -422,6 +442,7 @@ async function loadData(){
   renderSeasonCharts();
   renderPlayerGrid();
   renderTeamRounds();
+  renderAnalysis();
   return true;
 }
 
@@ -515,6 +536,102 @@ function renderTeamRounds(){
   if(allRounds.length)renderTeamContent(lastIdx);
 }
 function selectRound(i,b){document.querySelectorAll('.round-tab').forEach(t=>t.classList.remove('active'));b.classList.add('active');renderTeamContent(i);}
+
+// ── ANALYSIS: win/loss correlation ───────────────────────────────────────────
+const ANALYSIS_METRICS = [
+  {key:'pct_scores_i50', label:'% Scores I50', fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_marks_i50',  label:'% Marks I50',  fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_accuracy',   label:'% Accuracy',   fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_tackles_i50',label:'% Tackles I50',fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_oppo_r50',   label:'% Oppo R50',   fmt:v=>v.toFixed(1)+'%', goodDir:-1},
+  {key:'i50',            label:'Inside 50s',   fmt:v=>v.toFixed(1),     goodDir:1},
+  {key:'force_avg',      label:'Force Rating', fmt:v=>v.toFixed(0),     goodDir:1},
+  {key:'intercept_fwds', label:'Forward 1/2 Intercepts', fmt:v=>v.toFixed(1), goodDir:1},
+  {key:'intercept_backs',label:'Back 1/2 Intercepts',    fmt:v=>v.toFixed(1), goodDir:1},
+  {key:'intercept_mids', label:'Midfield Intercepts',    fmt:v=>v.toFixed(1), goodDir:1},
+];
+
+function pearsonR(xs, ys){
+  const n=xs.length;
+  const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+  let num=0,dx2=0,dy2=0;
+  for(let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
+  if(dx2===0||dy2===0) return null;
+  return num/Math.sqrt(dx2*dy2);
+}
+
+function linkLabel(r){
+  if(r===null) return {text:'Not enough data', cls:''};
+  const a=Math.abs(r);
+  const dir = r>=0 ? 'winning' : 'losing';
+  if(a>=0.6) return {text:'Strongly linked to '+dir, cls: r>=0?'analysis-good':'analysis-bad'};
+  if(a>=0.35) return {text:'Linked to '+dir, cls: r>=0?'analysis-good':'analysis-bad'};
+  if(a>=0.15) return {text:'Slightly linked to '+dir, cls:'analysis-neutral'};
+  return {text:'No clear link', cls:'analysis-neutral'};
+}
+
+function renderAnalysis(){
+  const intro = document.getElementById('analysisIntro');
+  const tbody = document.getElementById('analysisTableBody');
+  const takeaways = document.getElementById('analysisTakeaways');
+  if(!intro||!tbody||!takeaways) return;
+
+  const decided = allRounds.filter(r=>r.wl==='W'||r.wl==='L');
+  const wins = decided.filter(r=>r.wl==='W').length;
+  const losses = decided.filter(r=>r.wl==='L').length;
+
+  if(decided.length<4){
+    intro.textContent='Not enough completed rounds yet to spot reliable patterns — add a few more results and this page will start showing what correlates with winning.';
+    tbody.innerHTML='';
+    takeaways.innerHTML='';
+    return;
+  }
+
+  intro.textContent='Based on '+decided.length+' completed rounds this season ('+wins+' wins, '+losses+' losses), here is how each KPI relates to winning. The bigger the gap between the win and loss averages — and the stronger the correlation — the more that metric seems to matter to the result.';
+
+  const results = ANALYSIS_METRICS.map(m=>{
+    const pts = decided.filter(r=>r[m.key]!==null && r[m.key]!==undefined);
+    if(pts.length<4) return null;
+    const xs = pts.map(r=>r[m.key]);
+    const ys = pts.map(r=>r.wl==='W'?1:0);
+    const r = pearsonR(xs, ys);
+    const winPts = pts.filter(p=>p.wl==='W').map(p=>p[m.key]);
+    const lossPts = pts.filter(p=>p.wl==='L').map(p=>p[m.key]);
+    if(!winPts.length||!lossPts.length) return null;
+    const winAvg = winPts.reduce((a,b)=>a+b,0)/winPts.length;
+    const lossAvg = lossPts.reduce((a,b)=>a+b,0)/lossPts.length;
+    return {m, r, winAvg, lossAvg, diff: winAvg-lossAvg, n: pts.length};
+  }).filter(Boolean);
+
+  // sort by strength of correlation, strongest first
+  results.sort((a,b)=> Math.abs(b.r||0) - Math.abs(a.r||0));
+
+  tbody.innerHTML = results.map(res=>{
+    const link = linkLabel(res.r);
+    return '<tr>'
+      +'<td>'+res.m.label+'</td>'
+      +'<td class="kpi-val">'+res.m.fmt(res.winAvg)+'</td>'
+      +'<td class="kpi-val">'+res.m.fmt(res.lossAvg)+'</td>'
+      +'<td class="kpi-val">'+(res.diff>=0?'+':'−')+res.m.fmt(Math.abs(res.diff))+'</td>'
+      +'<td style="text-align:center"><span class="analysis-tag '+link.cls+'">'+link.text+'</span></td>'
+      +'</tr>';
+  }).join('');
+
+  // Build plain-English takeaways from the strongest 3 correlations (|r| >= 0.35)
+  const notable = results.filter(r=>r.r!==null && Math.abs(r.r)>=0.35).slice(0,4);
+  if(notable.length){
+    takeaways.innerHTML = '<div class="section-label" style="margin-bottom:8px">Key takeaways</div>'
+      + '<ul style="padding-left:18px;font-size:13px;color:var(--text-secondary);line-height:1.9">'
+      + notable.map(res=>{
+          const dir = res.r>=0 ? 'win' : 'lose';
+          const oppDir = res.r>=0 ? 'lose' : 'win';
+          return '<li>When the team has a <strong>higher</strong> '+res.m.label+' ('+res.m.fmt(res.winAvg)+' on average in wins vs '+res.m.fmt(res.lossAvg)+' in losses), the team tends to <strong>'+dir+'</strong> more often. Lower '+res.m.label+' lines up more with games we '+oppDir+'.</li>';
+        }).join('')
+      + '</ul>';
+  } else {
+    takeaways.innerHTML = '<p class="hint">No single metric stands out strongly yet — results look fairly even across most KPIs so far. As more rounds are added, clearer patterns may emerge.</p>';
+  }
+}
 function renderTeamContent(i){
   const r=allRounds[i];const avg=r.force_avg;
   const metricDefs=[{label:'Inside 50s',col:'i50',key:'i50',target:12},{label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},{label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},{label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},{label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},{label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25}];
