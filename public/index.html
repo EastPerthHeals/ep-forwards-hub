@@ -170,14 +170,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <a href="/admin/" class="header-admin">Admin</a>
 </div>
 <div class="nav">
-  <button class="nav-btn active" onclick="showPage('gameday',this)">&#9679; Game Day</button>
+  <button class="nav-btn active" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" onclick="showPage('season',this)">Season Tracker</button>
-  <button class="nav-btn" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" onclick="showPage('kpi',this)">KPI Targets</button>
+  <button class="nav-btn" onclick="showPage('gameday',this)">&#9679; Game Day</button>
 </div>
 
 <!-- GAME DAY -->
-<div id="page-gameday" class="page active">
+<div id="page-gameday" class="page">
   <div class="gd-live-panel">
     <div class="gd-force-row">
       <div>
@@ -238,7 +238,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </div>
 
 <!-- ROUND BY ROUND -->
-<div id="page-team" class="page">
+<div id="page-team" class="page active">
   <div class="round-tabs" id="teamRoundTabs"></div>
   <div id="teamContent"></div>
 </div>
@@ -510,8 +510,9 @@ function selectPlayer(name){
 }
 
 function renderTeamRounds(){
-  document.getElementById('teamRoundTabs').innerHTML=allRounds.map((r,i)=>'<button class="round-tab '+(i===0?'active':'')+'" onclick="selectRound('+i+',this)">'+r.short+'</button>').join('');
-  if(allRounds.length)renderTeamContent(0);
+  const lastIdx = allRounds.length-1;
+  document.getElementById('teamRoundTabs').innerHTML=allRounds.map((r,i)=>'<button class="round-tab '+(i===lastIdx?'active':'')+'" onclick="selectRound('+i+',this)">'+r.short+'</button>').join('');
+  if(allRounds.length)renderTeamContent(lastIdx);
 }
 function selectRound(i,b){document.querySelectorAll('.round-tab').forEach(t=>t.classList.remove('active'));b.classList.add('active');renderTeamContent(i);}
 function renderTeamContent(i){
