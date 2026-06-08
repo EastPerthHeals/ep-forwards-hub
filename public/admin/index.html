@@ -107,6 +107,7 @@ select option{background:#1c2333}
     <button class="tab active" onclick="switchTab('rounds',this)">Rounds</button>
     <button class="tab" onclick="switchTab('reviews',this)">Player Reviews</button>
     <button class="tab" onclick="switchTab('access',this)">Site Access</button>
+    <button class="tab" onclick="switchTab('analysis',this)">Analysis</button>
   </div>
 
   <!-- ROUNDS PANEL -->
@@ -228,6 +229,38 @@ select option{background:#1c2333}
       <div class="msg" id="sitePwMsg"></div>
     </div>
   </div>
+
+  <!-- ANALYSIS PANEL -->
+  <div class="panel" id="panel-analysis">
+    <div class="card">
+      <div class="card-title">Season Analysis — Full View &amp; Publishing Controls</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        This is the complete win/loss correlation analysis across all completed rounds — exactly
+        what the dashboard could show, before you decide what to publish. Tick the box next to any
+        metric to make it visible on the public Analysis tab. Untick it to hide it from everyone
+        else while you keep an eye on it privately. You control the narrative — publish a metric
+        once you're confident in what it's telling you, or once it suits the message you want the
+        group to hear.
+      </p>
+      <p id="analysisAdminIntro" style="font-size:12px;color:var(--text-secondary);margin-bottom:14px"></p>
+      <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px;overflow-x:auto">
+        <table class="kpi-table" id="analysisAdminTable" style="min-width:640px">
+          <thead><tr>
+            <th style="text-align:center">Show on dashboard</th>
+            <th>Metric</th>
+            <th style="text-align:center">Win average</th>
+            <th style="text-align:center">Loss average</th>
+            <th style="text-align:center">Difference</th>
+            <th style="text-align:center">Correlation (r)</th>
+            <th style="text-align:center">What it suggests</th>
+          </tr></thead>
+          <tbody id="analysisAdminBody"></tbody>
+        </table>
+      </div>
+      <button class="btn" onclick="saveAnalysisVisibility()">Save Publishing Choices</button>
+      <div class="msg" id="analysisMsg"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -256,6 +289,121 @@ function switchTab(name, btn){
   btn.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='access') loadSitePassword();
+  if(name==='analysis') loadAnalysisPanel();
+}
+
+// ── ANALYSIS PANEL ──────────────────────────────────────────────────────────
+
+const ANALYSIS_METRICS = [
+  {key:'pct_scores_i50', label:'% Scores I50', fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_marks_i50',  label:'% Marks I50',  fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_accuracy',   label:'% Accuracy',   fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_tackles_i50',label:'% Tackles I50',fmt:v=>v.toFixed(1)+'%', goodDir:1},
+  {key:'pct_oppo_r50',   label:'% Oppo R50',   fmt:v=>v.toFixed(1)+'%', goodDir:-1},
+  {key:'i50',            label:'Inside 50s',   fmt:v=>v.toFixed(1),     goodDir:1},
+  {key:'force_avg',      label:'Force Rating', fmt:v=>v.toFixed(0),     goodDir:1},
+  {key:'intercept_fwds', label:'Forward 1/2 Intercepts', fmt:v=>v.toFixed(1), goodDir:1},
+  {key:'intercept_backs',label:'Back 1/2 Intercepts',    fmt:v=>v.toFixed(1), goodDir:1},
+  {key:'intercept_mids', label:'Midfield Intercepts',    fmt:v=>v.toFixed(1), goodDir:1},
+];
+
+function pearsonR(xs, ys){
+  const n = xs.length;
+  if(n < 2) return 0;
+  const mx = xs.reduce((a,b)=>a+b,0)/n;
+  const my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx=0, dy=0;
+  for(let i=0;i<n;i++){
+    num += (xs[i]-mx)*(ys[i]-my);
+    dx += (xs[i]-mx)**2;
+    dy += (ys[i]-my)**2;
+  }
+  const denom = Math.sqrt(dx*dy);
+  return denom===0 ? 0 : num/denom;
+}
+
+function linkLabel(r){
+  const a = Math.abs(r);
+  const strength = a>=0.5 ? 'Strong' : a>=0.3 ? 'Moderate' : a>=0.15 ? 'Slight' : 'Little/no';
+  if(a < 0.15) return strength+' link';
+  return strength+' link to '+(r>0 ? 'winning' : 'losing');
+}
+
+let analysisAdminVisible = [];
+
+async function loadAnalysisPanel(){
+  const intro = document.getElementById('analysisAdminIntro');
+  const tbody = document.getElementById('analysisAdminBody');
+  const msg = document.getElementById('analysisMsg');
+  msg.textContent=''; msg.className='msg';
+  try{
+    const res = await fetch('/api/admin/analysis-settings',{headers:{'x-admin-token':token}}).then(r=>r.json());
+    analysisAdminVisible = (res && Array.isArray(res.visible)) ? res.visible : [];
+  }catch(e){
+    analysisAdminVisible = [];
+  }
+
+  const decided = allRounds.filter(r=>r.wl==='W'||r.wl==='L');
+  const wins = decided.filter(r=>r.wl==='W').length;
+  const losses = decided.filter(r=>r.wl==='L').length;
+
+  if(decided.length<4){
+    intro.textContent='Not enough completed rounds yet (need at least 4 with a result) to compute reliable correlations. Add more round data first.';
+    tbody.innerHTML='';
+    return;
+  }
+
+  intro.textContent='Full analysis based on '+decided.length+' completed rounds ('+wins+'W / '+losses+'L). Tick to publish a metric to the public dashboard.';
+
+  const rows = ANALYSIS_METRICS.map(m=>{
+    const pairs = decided.filter(r=>r[m.key]!=null && !isNaN(r[m.key]));
+    if(pairs.length<4) return null;
+    const xs = pairs.map(r=>Number(r[m.key]));
+    const ys = pairs.map(r=>r.wl==='W'?1:0);
+    const r = pearsonR(xs, ys);
+    const winVals = pairs.filter(p=>p.wl==='W').map(p=>Number(p[m.key]));
+    const lossVals = pairs.filter(p=>p.wl==='L').map(p=>Number(p[m.key]));
+    const winAvg = winVals.length ? winVals.reduce((a,b)=>a+b,0)/winVals.length : null;
+    const lossAvg = lossVals.length ? lossVals.reduce((a,b)=>a+b,0)/lossVals.length : null;
+    const diff = (winAvg!=null && lossAvg!=null) ? (winAvg-lossAvg) : null;
+    const checked = analysisAdminVisible.includes(m.key) ? 'checked' : '';
+    return `<tr>
+      <td style="text-align:center"><input type="checkbox" data-key="${m.key}" ${checked} onchange="" style="width:18px;height:18px"></td>
+      <td>${m.label}</td>
+      <td style="text-align:center">${winAvg!=null ? m.fmt(winAvg) : '—'}</td>
+      <td style="text-align:center">${lossAvg!=null ? m.fmt(lossAvg) : '—'}</td>
+      <td style="text-align:center">${diff!=null ? (diff>=0?'+':'')+m.fmt(diff).replace(/^-/,'-') : '—'}</td>
+      <td style="text-align:center">${r.toFixed(2)}</td>
+      <td style="text-align:center">${linkLabel(r)}</td>
+    </tr>`;
+  }).filter(Boolean);
+
+  tbody.innerHTML = rows.join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Not enough data yet for any metric.</td></tr>';
+}
+
+async function saveAnalysisVisibility(){
+  const msg = document.getElementById('analysisMsg');
+  const checked = [...document.querySelectorAll('#analysisAdminBody input[type=checkbox]:checked')].map(c=>c.dataset.key);
+  msg.textContent = 'Saving...';
+  msg.className = 'msg';
+  try{
+    const res = await fetch('/api/admin/analysis-settings',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({visible:checked})
+    });
+    if(res.ok){
+      msg.textContent = 'Saved! The public dashboard will now only show the metrics you\'ve ticked.';
+      msg.className = 'msg ok';
+      analysisAdminVisible = checked;
+    } else {
+      msg.textContent = 'Could not save — try again.';
+      msg.className = 'msg err';
+    }
+  }catch(e){
+    msg.textContent = 'Server error — try again.';
+    msg.className = 'msg err';
+  }
 }
 
 async function loadSitePassword(){
