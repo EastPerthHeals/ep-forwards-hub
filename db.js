@@ -143,4 +143,29 @@ async function setAnalysisVisible(keys) {
   );
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS };
+// ── OPPOSITION SCOUTING ──────────────────────────────────────────────────────
+
+async function getOppositionTeam(team) {
+  const database = await connect();
+  return database.collection('opposition')
+    .find({ team }, { projection: { _id: 0 } })
+    .toArray();
+}
+
+async function getAllOpposition() {
+  const database = await connect();
+  return database.collection('opposition')
+    .find({}, { projection: { _id: 0 } })
+    .toArray();
+}
+
+// Replaces the full defender list for one team — matches the weekly "upload latest PDF" workflow
+async function setOppositionTeam(team, players) {
+  const database = await connect();
+  await database.collection('opposition').deleteMany({ team });
+  if (Array.isArray(players) && players.length) {
+    await database.collection('opposition').insertMany(players.map(p => ({ ...p, team })));
+  }
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam };

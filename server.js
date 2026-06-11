@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible } = require('./db');
+const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,6 +65,11 @@ app.get('/api/rounds/:num', requireSiteAccess, wrap(async (req, res) => {
 app.get('/api/analysis-settings', requireSiteAccess, wrap(async (req, res) => {
   const visible = await getAnalysisVisible();
   res.json({ visible });
+}));
+
+app.get('/api/opposition/:team', requireSiteAccess, wrap(async (req, res) => {
+  const players = await getOppositionTeam(req.params.team);
+  res.json(players);
 }));
 
 app.get('/api/players', requireSiteAccess, wrap(async (req, res) => {
@@ -208,6 +213,22 @@ app.get('/api/admin/analysis-settings', requireAdmin, wrap(async (req, res) => {
 app.post('/api/admin/analysis-settings', requireAdmin, wrap(async (req, res) => {
   const visible = (req.body && req.body.visible) || [];
   await setAnalysisVisible(visible);
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/opposition', requireAdmin, wrap(async (req, res) => {
+  const all = await getAllOpposition();
+  res.json(all);
+}));
+
+app.get('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
+  const players = await getOppositionTeam(req.params.team);
+  res.json(players);
+}));
+
+app.post('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
+  const players = (req.body && req.body.players) || [];
+  await setOppositionTeam(req.params.team, players);
   res.json({ ok: true });
 }));
 

@@ -85,6 +85,14 @@ select option{background:#1c2333}
 .source-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 .source-tile{background:var(--card-bg,rgba(255,255,255,0.04));border:1px solid var(--border);color:var(--text-primary,var(--muted));font-size:12px;padding:8px 14px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:border-color .15s,color .15s}
 .source-tile:hover{border-color:var(--accent);color:var(--accent-light)}
+
+/* tables */
+.kpi-table{width:100%;border-collapse:collapse;font-size:12px}
+.kpi-table th,.kpi-table td{padding:8px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap}
+.kpi-table th{color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;font-weight:500}
+.kpi-table td input,.kpi-table td select{font-size:12px;padding:6px 8px}
+.kpi-table td input[type=number]{width:70px}
+.kpi-table td input[type=text]{min-width:110px}
 </style>
 </head>
 <body>
@@ -112,6 +120,7 @@ select option{background:#1c2333}
     <button class="tab" onclick="switchTab('reviews',this)">Player Reviews</button>
     <button class="tab" onclick="switchTab('access',this)">Site Access</button>
     <button class="tab" onclick="switchTab('analysis',this)">Analysis</button>
+    <button class="tab" onclick="switchTab('opposition',this)">Opposition</button>
   </div>
 
   <!-- ROUNDS PANEL -->
@@ -265,6 +274,54 @@ select option{background:#1c2333}
       <div class="msg" id="analysisMsg"></div>
     </div>
   </div>
+
+  <!-- OPPOSITION PANEL -->
+  <div class="panel" id="panel-opposition">
+    <div class="card">
+      <div class="card-title">Opposition Scouting — Defenders</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        Build a defender profile for each opposition team. Pick a team, then add/edit their
+        Key Def and Gen Def players with stats from the latest KPI summary PDF (KE%, M, HBG, LBG,
+        CP, UP, R50) and a photo URL from their WAFL profile page. Saving replaces that team's
+        whole roster — so just paste in the latest numbers each week before you play them.
+      </p>
+      <div class="field" style="max-width:280px">
+        <label>Team</label>
+        <select id="oppTeamSelect" onchange="loadOppositionTeam()">
+          <option value="Claremont">Claremont</option>
+          <option value="East Fremantle">East Fremantle</option>
+          <option value="Peel Thunder">Peel Thunder</option>
+          <option value="Perth">Perth</option>
+          <option value="South Fremantle">South Fremantle</option>
+          <option value="Subiaco">Subiaco</option>
+          <option value="Swan Districts">Swan Districts</option>
+          <option value="West Coast">West Coast</option>
+          <option value="West Perth">West Perth</option>
+        </select>
+      </div>
+      <div style="background:var(--bg-card2,var(--card));border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;overflow-x:auto">
+        <table class="kpi-table" id="oppTable" style="min-width:1000px">
+          <thead><tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Photo URL</th>
+            <th style="text-align:center">KE%</th>
+            <th style="text-align:center">M</th>
+            <th style="text-align:center">HBG</th>
+            <th style="text-align:center">LBG</th>
+            <th style="text-align:center">CP</th>
+            <th style="text-align:center">UP</th>
+            <th style="text-align:center">R50</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="oppTableBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-sm edit-btn" style="margin-right:10px" onclick="addOppositionRow()">+ Add Player</button>
+      <button class="btn" onclick="saveOppositionTeam()">Save Team</button>
+      <div class="msg" id="oppMsg"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -294,6 +351,92 @@ function switchTab(name, btn){
   document.getElementById('panel-'+name).classList.add('active');
   if(name==='access') loadSitePassword();
   if(name==='analysis') loadAnalysisPanel();
+  if(name==='opposition') loadOppositionTeam();
+}
+
+// ── OPPOSITION PANEL ─────────────────────────────────────────────────────────
+
+const OPP_POSITIONS = ['Gen Def','Key Def'];
+
+function oppRowHtml(p){
+  p = p || {};
+  const posOptions = OPP_POSITIONS.map(pos=>'<option value="'+pos+'"'+(p.position===pos?' selected':'')+'>'+pos+'</option>').join('');
+  const num = v => (v===undefined||v===null) ? '' : v;
+  return '<tr>'
+    + '<td><input type="text" value="'+(p.name||'').replace(/"/g,'&quot;')+'" placeholder="B.Surname"></td>'
+    + '<td><select>'+posOptions+'</select></td>'
+    + '<td><input type="text" value="'+(p.photo_url||'').replace(/"/g,'&quot;')+'" placeholder="https://..."></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.ke_pct)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.m)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.hbg)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.lbg)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.cp)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.up)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
+    + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
+    + '</tr>';
+}
+
+function addOppositionRow(){
+  document.getElementById('oppTableBody').insertAdjacentHTML('beforeend', oppRowHtml());
+}
+
+async function loadOppositionTeam(){
+  const team = document.getElementById('oppTeamSelect').value;
+  const tbody = document.getElementById('oppTableBody');
+  const msg = document.getElementById('oppMsg');
+  msg.textContent=''; msg.className='msg';
+  try{
+    const players = await fetch('/api/admin/opposition/'+encodeURIComponent(team),{headers:{'x-admin-token':token}}).then(r=>r.json());
+    tbody.innerHTML = (players||[]).map(oppRowHtml).join('');
+  }catch(e){
+    tbody.innerHTML='';
+    msg.textContent='Could not load this team — try again.';
+    msg.className='msg err';
+  }
+}
+
+async function saveOppositionTeam(){
+  const team = document.getElementById('oppTeamSelect').value;
+  const msg = document.getElementById('oppMsg');
+  const rows = [...document.querySelectorAll('#oppTableBody tr')];
+  const players = rows.map(row=>{
+    const cells = row.querySelectorAll('input,select');
+    const num = v => v==='' ? null : Number(v);
+    return {
+      name: cells[0].value.trim(),
+      position: cells[1].value,
+      photo_url: cells[2].value.trim(),
+      ke_pct: num(cells[3].value),
+      m: num(cells[4].value),
+      hbg: num(cells[5].value),
+      lbg: num(cells[6].value),
+      cp: num(cells[7].value),
+      up: num(cells[8].value),
+      r50: num(cells[9].value),
+    };
+  }).filter(p=>p.name);
+
+  msg.textContent='Saving...'; msg.className='msg';
+  try{
+    const res = await fetch('/api/admin/opposition/'+encodeURIComponent(team),{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({players})
+    });
+    if(res.ok){
+      msg.textContent='Saved! '+team+'\'s defender profiles are now live on the dashboard.';
+      msg.className='msg ok';
+      showToast('Opposition team saved!');
+    } else {
+      msg.textContent='Could not save — try again.';
+      msg.className='msg err';
+      showToast('Could not save — try again.','err');
+    }
+  }catch(e){
+    msg.textContent='Server error — try again.';
+    msg.className='msg err';
+  }
 }
 
 // ── ANALYSIS PANEL ──────────────────────────────────────────────────────────

@@ -116,6 +116,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .player-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s}
 .player-card:hover{background:var(--bg-card2);border-color:var(--border-hover)}
 .player-card.selected{border-color:var(--accent);background:var(--accent-dim)}
+.opp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media(max-width:600px){.opp-grid{grid-template-columns:1fr}}
+.opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:14px}
+.opp-photo{width:72px;height:72px;border-radius:10px;object-fit:cover;background:var(--bg-card2);flex-shrink:0;border:1px solid var(--border)}
+.opp-photo-placeholder{width:72px;height:72px;border-radius:10px;background:var(--bg-card2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:var(--text-muted)}
+.opp-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.opp-pos{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-dim2);border-radius:6px;padding:2px 8px;margin-bottom:8px}
+.opp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px}
+.opp-stat-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.opp-stat-val{font-size:13px;font-weight:600}
 .player-name{font-size:14px;font-weight:500;color:var(--text-primary);margin-bottom:4px}
 .player-rounds{font-size:11px;color:var(--text-muted)}
 .rating-dots{display:flex;gap:4px;margin-top:10px}
@@ -187,6 +197,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn" onclick="showPage('season',this)">Season Tracker</button>
   <button class="nav-btn" onclick="showPage('kpi',this)">KPI Targets</button>
   <button class="nav-btn" onclick="showPage('analysis',this)">Analysis</button>
+  <button class="nav-btn" onclick="showPage('opposition',this)">Opposition</button>
   <button class="nav-btn" onclick="showPage('gameday',this)">&#9679; Game Day</button>
 </div>
 
@@ -304,6 +315,27 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <p class="section-label" style="margin:24px 0 12px">Where our scores come from &mdash; season breakdown</p>
   <div class="score-sources" id="scoreSourcesBreakdown" style="margin-bottom:12px"></div>
   <p class="hint" id="scoreSourcesHint"></p>
+</div>
+
+<!-- OPPOSITION -->
+<div id="page-opposition" class="page">
+  <p class="section-label" style="margin-bottom:6px">Opposition scouting &mdash; defenders</p>
+  <p class="hint" style="margin-bottom:16px">Pick this week's opponent to see their key and general defenders &mdash; KE% (kicking efficiency), marks, hard/loose ball gets, contested &amp; uncontested possessions, and rebound 50s.</p>
+  <div class="field" style="max-width:280px;margin-bottom:20px">
+    <select id="oppTeamPicker" onchange="loadOppositionPage()" style="width:100%;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-size:13px;padding:10px 12px;border-radius:8px;font-family:var(--font)">
+      <option value="">Select a team&hellip;</option>
+      <option value="Claremont">Claremont</option>
+      <option value="East Fremantle">East Fremantle</option>
+      <option value="Peel Thunder">Peel Thunder</option>
+      <option value="Perth">Perth</option>
+      <option value="South Fremantle">South Fremantle</option>
+      <option value="Subiaco">Subiaco</option>
+      <option value="Swan Districts">Swan Districts</option>
+      <option value="West Coast">West Coast</option>
+      <option value="West Perth">West Perth</option>
+    </select>
+  </div>
+  <div id="oppGrid" class="opp-grid"></div>
 </div>
 
 <script>
@@ -731,6 +763,49 @@ function renderScoreSourcesAnalysis(){
   ).join('');
 
   hint.textContent = 'Based on '+grandTotal+' goals across '+allRounds.filter(r=>r.score_sources&&r.score_sources.length).length+' rounds with recorded score sources. Shows what share of our total goals came from each source this season — e.g. "10 goals out of 100 = 10%".';
+}
+
+async function loadOppositionPage(){
+  const team = document.getElementById('oppTeamPicker').value;
+  const grid = document.getElementById('oppGrid');
+  if(!team){ grid.innerHTML=''; return; }
+  grid.innerHTML = '<p class="hint">Loading...</p>';
+  let players;
+  try{
+    players = await siteFetch('/api/opposition/'+encodeURIComponent(team)).then(r=>r.json());
+  }catch(e){
+    grid.innerHTML = '<p class="hint">Could not load this team — try again.</p>';
+    return;
+  }
+  if(!players || !players.length){
+    grid.innerHTML = '<p class="hint">No defender data has been added for '+team+' yet.</p>';
+    return;
+  }
+  const order = {'Key Def':0, 'Gen Def':1};
+  players = [...players].sort((a,b)=>(order[a.position]??2)-(order[b.position]??2) || a.name.localeCompare(b.name));
+  const stat = (label,val,suffix) => '<div><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
+  grid.innerHTML = players.map(p=>{
+    const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
+    const photo = p.photo_url
+      ? '<img class="opp-photo" src="'+p.photo_url+'" alt="'+p.name+'" onerror="this.outerHTML=\'<div class=&quot;opp-photo-placeholder&quot;>'+initials+'</div>\'">'
+      : '<div class="opp-photo-placeholder">'+initials+'</div>';
+    return '<div class="opp-card">'
+      + photo
+      + '<div style="flex:1">'
+      +   '<div class="opp-name">'+p.name+'</div>'
+      +   '<div class="opp-pos">'+p.position+'</div>'
+      +   '<div class="opp-stats">'
+      +     stat('KE%', p.ke_pct, '%')
+      +     stat('M', p.m)
+      +     stat('HBG', p.hbg)
+      +     stat('LBG', p.lbg)
+      +     stat('CP', p.cp)
+      +     stat('UP', p.up)
+      +     stat('R50', p.r50)
+      +   '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 function renderTeamContent(i){
