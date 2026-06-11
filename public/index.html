@@ -116,16 +116,22 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .player-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s}
 .player-card:hover{background:var(--bg-card2);border-color:var(--border-hover)}
 .player-card.selected{border-color:var(--accent);background:var(--accent-dim)}
-.opp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-@media(max-width:600px){.opp-grid{grid-template-columns:1fr}}
-.opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:14px}
-.opp-photo{width:72px;height:72px;border-radius:10px;object-fit:cover;background:var(--bg-card2);flex-shrink:0;border:1px solid var(--border)}
-.opp-photo-placeholder{width:72px;height:72px;border-radius:10px;background:var(--bg-card2);border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:var(--text-muted)}
-.opp-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.opp-grid{display:flex;flex-direction:column;gap:18px}
+.opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
+.opp-photo{width:140px;height:140px;border-radius:12px;object-fit:cover;background:transparent;flex-shrink:0}
+.opp-photo-placeholder{width:140px;height:140px;border-radius:12px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:600;color:var(--text-muted)}
+.opp-name{font-size:16px;font-weight:600;margin-bottom:4px}
 .opp-pos{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-dim2);border-radius:6px;padding:2px 8px;margin-bottom:8px}
 .opp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px}
 .opp-stat-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
 .opp-stat-val{font-size:13px;font-weight:600}
+.opp-notes{flex-basis:100%;margin-top:10px;padding-top:14px;border-top:1px solid var(--border)}
+.opp-notes-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+.opp-note{background:var(--bg-card2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;line-height:1.4}
+.opp-note-author{font-weight:600;color:var(--accent-light);margin-right:6px}
+.opp-note-form{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.opp-note-form input,.opp-note-form textarea{background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);border-radius:6px;padding:6px 8px;font-size:12px;font-family:var(--font);resize:vertical}
+.opp-note-form button{align-self:flex-start;background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent-light);font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:var(--font)}
 .player-name{font-size:14px;font-weight:500;color:var(--text-primary);margin-bottom:4px}
 .player-rounds{font-size:11px;color:var(--text-muted)}
 .rating-dots{display:flex;gap:4px;margin-top:10px}
@@ -770,9 +776,12 @@ async function loadOppositionPage(){
   const grid = document.getElementById('oppGrid');
   if(!team){ grid.innerHTML=''; return; }
   grid.innerHTML = '<p class="hint">Loading...</p>';
-  let players;
+  let players, notes;
   try{
-    players = await siteFetch('/api/opposition/'+encodeURIComponent(team)).then(r=>r.json());
+    [players, notes] = await Promise.all([
+      siteFetch('/api/opposition/'+encodeURIComponent(team)).then(r=>r.json()),
+      siteFetch('/api/opposition-notes/'+encodeURIComponent(team)).then(r=>r.json())
+    ]);
   }catch(e){
     grid.innerHTML = '<p class="hint">Could not load this team — try again.</p>';
     return;
@@ -783,12 +792,18 @@ async function loadOppositionPage(){
   }
   const order = {'Key Def':0, 'Gen Def':1};
   players = [...players].sort((a,b)=>(order[a.position]??2)-(order[b.position]??2) || a.name.localeCompare(b.name));
+  const notesByPlayer = {};
+  (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
   const stat = (label,val,suffix) => '<div><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
   grid.innerHTML = players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
     const photo = p.photo_url
       ? '<img class="opp-photo" src="'+p.photo_url+'" alt="'+p.name+'" onerror="this.outerHTML=\'<div class=&quot;opp-photo-placeholder&quot;>'+initials+'</div>\'">'
       : '<div class="opp-photo-placeholder">'+initials+'</div>';
+    const playerNotes = notesByPlayer[p.name] || [];
+    const notesList = playerNotes.length
+      ? playerNotes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
+      : '<p class="hint" style="margin:0">No notes yet — be the first to add one.</p>';
     return '<div class="opp-card">'
       + photo
       + '<div style="flex:1">'
@@ -804,8 +819,47 @@ async function loadOppositionPage(){
       +     stat('R50', p.r50)
       +   '</div>'
       + '</div>'
+      + '<div class="opp-notes">'
+      +   '<div class="opp-notes-title">Player Notes</div>'
+      +   '<div class="opp-notes-list">'+notesList+'</div>'
+      +   '<div class="opp-note-form">'
+      +     '<input type="text" placeholder="Your name" maxlength="40">'
+      +     '<textarea placeholder="E.g. felt comfortable to beat him on a lead, but 1 v 1 he is too strong, so don\'t engage in the wrestle with him" rows="2" maxlength="500"></textarea>'
+      +     '<button type="button" onclick="addOppNote(this,\''+team.replace(/'/g,"\\'")+'\',\''+p.name.replace(/'/g,"\\'")+'\')">Add Note</button>'
+      +   '</div>'
+      + '</div>'
       + '</div>';
   }).join('');
+}
+
+function escapeHtml(str){
+  return (str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function addOppNote(btn, team, player){
+  const form = btn.parentElement;
+  const nameInput = form.querySelector('input');
+  const noteInput = form.querySelector('textarea');
+  const author = nameInput.value.trim();
+  const note = noteInput.value.trim();
+  if(!author || !note){ alert('Please enter your name and a note.'); return; }
+  btn.disabled = true;
+  try{
+    const saved = await siteFetch('/api/opposition-notes/'+encodeURIComponent(team)+'/'+encodeURIComponent(player), {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({author, note})
+    }).then(r=>r.json());
+    const list = form.parentElement.querySelector('.opp-notes-list');
+    if(list.querySelector('.hint')) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', '<div class="opp-note"><span class="opp-note-author">'+escapeHtml(saved.author)+':</span>'+escapeHtml(saved.note)+'</div>');
+    nameInput.value = '';
+    noteInput.value = '';
+  }catch(e){
+    alert('Could not save note — please try again.');
+  }finally{
+    btn.disabled = false;
+  }
 }
 
 function renderTeamContent(i){

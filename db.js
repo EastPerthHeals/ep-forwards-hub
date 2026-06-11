@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const MONGO_URI = process.env.MONGO_URI;
 const DB_NAME = process.env.MONGO_DB_NAME || 'ep_forwards_hub';
@@ -168,4 +168,27 @@ async function setOppositionTeam(team, players) {
   }
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam };
+// ── OPPOSITION PLAYER NOTES ──────────────────────────────────────────────────
+
+async function getOppositionNotes(team) {
+  const database = await connect();
+  const notes = await database.collection('opposition_notes')
+    .find({ team })
+    .sort({ created_at: 1 })
+    .toArray();
+  return notes.map(n => ({ _id: n._id.toString(), player: n.player, author: n.author, note: n.note, created_at: n.created_at }));
+}
+
+async function addOppositionNote(team, player, author, note) {
+  const database = await connect();
+  const doc = { team, player, author, note, created_at: new Date() };
+  const result = await database.collection('opposition_notes').insertOne(doc);
+  return { _id: result.insertedId.toString(), team, player, author, note, created_at: doc.created_at };
+}
+
+async function deleteOppositionNote(id) {
+  const database = await connect();
+  await database.collection('opposition_notes').deleteOne({ _id: new ObjectId(id) });
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote };
