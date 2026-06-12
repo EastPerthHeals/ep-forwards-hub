@@ -799,8 +799,7 @@ async function loadOppositionPage(){
     grid.innerHTML = '<p class="hint">No defender data has been added for '+team+' yet.</p>';
     return;
   }
-  const order = {'Key Def':0, 'Gen Def':1};
-  players = [...players].sort((a,b)=>(order[a.position]??2)-(order[b.position]??2) || a.name.localeCompare(b.name));
+  players = [...players].sort((a,b)=>(b.matches??-1)-(a.matches??-1) || a.name.localeCompare(b.name));
   const notesByPlayer = {};
   (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
   const stat = (label,val,suffix) => '<div class="opp-stat"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
@@ -826,6 +825,7 @@ async function loadOppositionPage(){
       +     stat('CP', p.cp)
       +     stat('UP', p.up)
       +     stat('R50', p.r50)
+      +     stat('T', p.t)
       +   '</div>'
       + '</div>'
       + '<div class="opp-notes">'
