@@ -247,7 +247,7 @@ select option{background:#1c2333}
         Build a player profile for each opposition team. Pick a team, then add/edit their
         players with stats from the latest KPI summary PDF (KE%, M, HBG, LBG, CP, UP, R50, HR)
         and a photo URL from their WAFL profile page. The position you choose (Key/Gen Def,
-        Inside/Outside Mid, Key/Gen Fwd) determines whether a player shows up under the
+        Mid, Mid-Fwd, Ruck, Gen/Key Fwd) determines whether a player shows up under the
         Backs, Midfielders or Forwards tab on the dashboard. Saving replaces that team's
         whole roster — so just paste in the latest numbers each week before you play them.
       </p>
@@ -327,7 +327,7 @@ function switchTab(name, btn){
 
 // ── OPPOSITION PANEL ─────────────────────────────────────────────────────────
 
-const OPP_POSITIONS = ['Gen Def','Key Def','Inside Mid','Outside Mid','Gen Fwd','Key Fwd'];
+const OPP_POSITIONS = ['Key Def','Gen Def','Mid','Mid-Fwd','Ruck','Gen Fwd','Key Fwd'];
 
 function oppRowHtml(p){
   p = p || {};

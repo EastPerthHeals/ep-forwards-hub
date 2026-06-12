@@ -752,11 +752,12 @@ function selectOppLine(btn){
 }
 
 function lineForPosition(pos){
-  if(!pos) return null;
-  if(pos.includes('Def')) return 'Backs';
-  if(pos.includes('Fwd')) return 'Forwards';
-  if(pos.includes('Mid')) return 'Midfielders';
-  return null;
+  const map = {
+    'Key Def':'Backs', 'Gen Def':'Backs',
+    'Mid':'Midfielders', 'Mid-Fwd':'Midfielders', 'Ruck':'Midfielders',
+    'Gen Fwd':'Forwards', 'Key Fwd':'Forwards'
+  };
+  return map[pos] || null;
 }
 
 async function loadOppositionPage(){
