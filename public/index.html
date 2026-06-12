@@ -127,6 +127,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-stat{background:var(--bg-card2);border-radius:10px;padding:12px 8px;text-align:center}
 .opp-stat-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
 .opp-stat-val{font-size:24px;font-weight:700;color:var(--text-primary)}
+.opp-stat-elite .opp-stat-val{color:var(--c-purple)}
+.opp-stat-good .opp-stat-val{color:var(--c-green)}
+.opp-stat-weak .opp-stat-val{color:var(--c-red)}
 .opp-notes{flex-basis:100%;margin-top:10px;padding-top:14px;border-top:1px solid var(--border)}
 .opp-notes-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
 .opp-note{background:var(--bg-card2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;line-height:1.4}
@@ -755,7 +758,15 @@ async function loadOppositionPage(){
   players = [...players].sort((a,b)=>(b.matches??-1)-(a.matches??-1) || a.name.localeCompare(b.name));
   const notesByPlayer = {};
   (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
-  const stat = (label,val,suffix) => '<div class="opp-stat"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
+  const oppThresholds = { ke_pct:[85,70], m:[7,4], hbg:[5,2], lbg:[3.5,2], cp:[5,2], up:[10,7], r50:[4,2], t:[4,2] };
+  const oppStatClass = (key,val) => {
+    if(val===null || val===undefined) return '';
+    const [elite,good] = oppThresholds[key];
+    if(val>=elite) return ' opp-stat-elite';
+    if(val>=good) return ' opp-stat-good';
+    return ' opp-stat-weak';
+  };
+  const stat = (key,label,val,suffix) => '<div class="opp-stat'+oppStatClass(key,val)+'"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
   grid.innerHTML = players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
     const photo = p.photo_url
@@ -776,14 +787,14 @@ async function loadOppositionPage(){
       +   '<div class="opp-name">'+p.name+'</div>'
       +   '<div class="opp-pos">'+p.position+'</div>'
       +   '<div class="opp-stats">'
-      +     stat('KE%', p.ke_pct, '%')
-      +     stat('M', p.m)
-      +     stat('HBG', p.hbg)
-      +     stat('LBG', p.lbg)
-      +     stat('CP', p.cp)
-      +     stat('UP', p.up)
-      +     stat('R50', p.r50)
-      +     stat('T', p.t)
+      +     stat('ke_pct','KE%', p.ke_pct, '%')
+      +     stat('m','M', p.m)
+      +     stat('hbg','HBG', p.hbg)
+      +     stat('lbg','LBG', p.lbg)
+      +     stat('cp','CP', p.cp)
+      +     stat('up','UP', p.up)
+      +     stat('r50','R50', p.r50)
+      +     stat('t','T', p.t)
       +   '</div>'
       + '</div>'
       + '<div class="opp-notes">'
@@ -791,7 +802,7 @@ async function loadOppositionPage(){
       +   '<div class="opp-notes-list">'+notesList+'</div>'
       +   '<div class="opp-note-form">'
       +     '<input type="text" placeholder="Your name" maxlength="40">'
-      +     '<textarea placeholder="E.g. felt comfortable to beat him on a lead, but 1 v 1 he is too strong, so don\'t engage in the wrestle with him" rows="2" maxlength="500"></textarea>'
+      +     '<textarea placeholder="E.g. felt comfortable to beat him on a lead, but 1 v 1 he is too strong, so don\'t engage in the wrestle." rows="2" maxlength="500"></textarea>'
       +     '<button type="button" onclick="addOppNote(this,\''+team.replace(/'/g,"\\'")+'\',\''+p.name.replace(/'/g,"\\'")+'\')">Add Note</button>'
       +   '</div>'
       + '</div>'
