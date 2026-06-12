@@ -248,7 +248,7 @@ select option{background:#1c2333}
         players with stats from the latest KPI summary PDF (KE%, M, HBG, LBG, CP, UP, R50, HR)
         and a photo URL from their WAFL profile page. The position you choose (Key/Gen Def,
         Mid, Mid-Fwd, Ruck, Gen/Key Fwd) determines whether a player shows up under the
-        Backs, Midfielders or Forwards tab on the dashboard. Saving replaces that team's
+        Defenders, Midfielders or Forwards tab on the dashboard. Saving replaces that team's
         whole roster — so just paste in the latest numbers each week before you play them.
       </p>
       <div class="field" style="max-width:280px">
@@ -266,7 +266,7 @@ select option{background:#1c2333}
         </select>
       </div>
       <div style="background:var(--bg-card2,var(--card));border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;overflow-x:auto">
-        <table class="kpi-table" id="oppTable" style="min-width:1300px">
+        <table class="kpi-table" id="oppTable" style="min-width:1380px">
           <thead><tr>
             <th style="text-align:center">Likely?</th>
             <th>Name</th>
@@ -286,6 +286,7 @@ select option{background:#1c2333}
             <th style="text-align:center">I50</th>
             <th style="text-align:center">SA</th>
             <th style="text-align:center">C</th>
+            <th style="text-align:center">UM</th>
             <th style="text-align:center">T</th>
             <th style="text-align:center">G</th>
             <th style="text-align:center">B</th>
@@ -358,6 +359,7 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.i50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.sa)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.c)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.um)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.g)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.b)+'"></td>'
@@ -411,10 +413,11 @@ async function saveOppositionTeam(){
       i50: num(cells[15].value),
       sa: num(cells[16].value),
       c: num(cells[17].value),
-      t: num(cells[18].value),
-      g: num(cells[19].value),
-      b: num(cells[20].value),
-      matches: num(cells[21].value),
+      um: num(cells[18].value),
+      t: num(cells[19].value),
+      g: num(cells[20].value),
+      b: num(cells[21].value),
+      matches: num(cells[22].value),
     };
   }).filter(p=>p.name);
 
