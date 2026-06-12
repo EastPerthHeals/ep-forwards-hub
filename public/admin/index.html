@@ -280,7 +280,7 @@ select option{background:#1c2333}
             <th style="text-align:center">CP</th>
             <th style="text-align:center">UP</th>
             <th style="text-align:center">R50</th>
-            <th style="text-align:center">T</th>
+            <th style="text-align:center">HR</th>
             <th style="text-align:center">Mt</th>
             <th></th>
           </tr></thead>
@@ -346,7 +346,7 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.cp)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.up)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
-    + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.hr)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
@@ -393,7 +393,7 @@ async function saveOppositionTeam(){
       cp: num(cells[11].value),
       up: num(cells[12].value),
       r50: num(cells[13].value),
-      t: num(cells[14].value),
+      hr: num(cells[14].value),
       matches: num(cells[15].value),
     };
   }).filter(p=>p.name);
