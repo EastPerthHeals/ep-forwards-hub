@@ -108,24 +108,6 @@ app.delete('/api/round-notes/:id', requireSiteAccess, wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.get('/api/players', requireSiteAccess, wrap(async (req, res) => {
-  const data = await load();
-  const grouped = {};
-  const sorted = [...data.reviews].sort((a, b) => a.round_num - b.round_num);
-  for (const r of sorted) {
-    if (!grouped[r.player_name]) grouped[r.player_name] = { rounds: [] };
-    grouped[r.player_name].rounds.push({
-      rd: r.round_label,
-      rating: r.rating,
-      comment: r.comment
-    });
-  }
-  // sort players alphabetically
-  const out = {};
-  Object.keys(grouped).sort().forEach(k => out[k] = grouped[k]);
-  res.json(out);
-}));
-
 // ── LIVE GAME DAY API ────────────────────────────────────────────────────────
 
 let liveGameDay = [
@@ -195,38 +177,6 @@ app.delete('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
   data.rounds = data.rounds.filter(r => r.round_num !== parseInt(req.params.num));
   await save(data);
   res.json({ ok: true });
-}));
-
-app.post('/api/admin/reviews', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
-  const d = req.body;
-  const idx = data.reviews.findIndex(r => r.player_name === d.player_name && r.round_num === d.round_num);
-  const review = {
-    player_name: d.player_name,
-    round_num: d.round_num,
-    round_label: d.round_label,
-    rating: d.rating,
-    comment: d.comment,
-  };
-  if (idx >= 0) data.reviews[idx] = review;
-  else data.reviews.push(review);
-  await save(data);
-  res.json({ ok: true });
-}));
-
-app.delete('/api/admin/reviews/:player/:round', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
-  const player = decodeURIComponent(req.params.player);
-  const round = parseInt(req.params.round);
-  data.reviews = data.reviews.filter(r => !(r.player_name === player && r.round_num === round));
-  await save(data);
-  res.json({ ok: true });
-}));
-
-app.get('/api/admin/players-list', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
-  const names = [...new Set(data.reviews.map(r => r.player_name))].sort();
-  res.json(names);
 }));
 
 app.get('/api/admin/site-password', requireAdmin, wrap(async (req, res) => {

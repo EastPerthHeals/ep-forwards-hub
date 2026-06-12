@@ -117,10 +117,9 @@ select option{background:#1c2333}
 <div class="main" id="mainAdmin">
   <div class="tabs">
     <button class="tab active" onclick="switchTab('rounds',this)">Rounds</button>
-    <button class="tab" onclick="switchTab('reviews',this)">Player Reviews</button>
-    <button class="tab" onclick="switchTab('access',this)">Site Access</button>
-    <button class="tab" onclick="switchTab('analysis',this)">Analysis</button>
     <button class="tab" onclick="switchTab('opposition',this)">Opposition</button>
+    <button class="tab" onclick="switchTab('analysis',this)">Analysis</button>
+    <button class="tab" onclick="switchTab('access',this)">Site Access</button>
   </div>
 
   <!-- ROUNDS PANEL -->
@@ -185,41 +184,6 @@ select option{background:#1c2333}
     <div class="card" style="padding:0;overflow:hidden">
       <div id="roundList"></div>
     </div>
-  </div>
-
-  <!-- REVIEWS PANEL -->
-  <div class="panel" id="panel-reviews">
-    <div class="card">
-      <div class="card-title" id="reviewFormTitle">Add / Edit Player Review</div>
-      <div class="grid2">
-        <div class="field"><label>Player name</label>
-          <input type="text" id="rv-player" list="playerSuggestions" placeholder="B. Middleton"/>
-          <datalist id="playerSuggestions"></datalist>
-        </div>
-        <div class="field"><label>Round number</label><input type="number" id="rv-round" placeholder="9"/></div>
-      </div>
-      <div class="grid2">
-        <div class="field"><label>Round label</label><input type="text" id="rv-rdlabel" placeholder="Rd 9"/></div>
-        <div class="field"><label>Rating</label>
-          <select id="rv-rating">
-            <option>Excellent</option>
-            <option>Above Average</option>
-            <option selected>Average</option>
-            <option>Below Average</option>
-            <option>Well Below Average</option>
-          </select>
-        </div>
-      </div>
-      <div class="field"><label>Review comment</label><textarea id="rv-comment" style="min-height:120px" placeholder="Player review text..."></textarea></div>
-      <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
-        <button class="btn" onclick="saveReview()">Save Review</button>
-        <button class="btn btn-danger btn-sm" id="cancelReviewBtn" onclick="cancelReviewEdit()" style="display:none">Cancel edit</button>
-      </div>
-      <div class="msg" id="reviewMsg"></div>
-    </div>
-
-    <div class="section-label">Existing reviews</div>
-    <div id="reviewList"></div>
   </div>
 
   <!-- SITE ACCESS PANEL -->
@@ -314,6 +278,9 @@ select option{background:#1c2333}
             <th style="text-align:center">R50</th>
             <th style="text-align:center">T</th>
             <th style="text-align:center">Mt</th>
+            <th style="text-align:center">Height (cm)</th>
+            <th style="text-align:center">Weight (kg)</th>
+            <th style="text-align:center">Foot</th>
             <th></th>
           </tr></thead>
           <tbody id="oppTableBody"></tbody>
@@ -329,11 +296,10 @@ select option{background:#1c2333}
 <script>
 let token = '';
 let editingRound = null;
-let editingReview = null;
 
 function doLogin(){
   const pw = document.getElementById('pwInput').value;
-  fetch('/api/admin/players-list', {headers:{'x-admin-token':pw}})
+  fetch('/api/admin/site-password', {headers:{'x-admin-token':pw}})
     .then(r=>{
       if(r.ok){
         token = pw;
@@ -377,6 +343,9 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
+    + '<td><input type="number" step="1" value="'+num(p.height_cm)+'"></td>'
+    + '<td><input type="number" step="1" value="'+num(p.weight_kg)+'"></td>'
+    + '<td><select><option value=""'+(!p.foot?' selected':'')+'>—</option><option value="Right"'+(p.foot==='Right'?' selected':'')+'>Right</option><option value="Left"'+(p.foot==='Left'?' selected':'')+'>Left</option></select></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
 }
@@ -420,6 +389,9 @@ async function saveOppositionTeam(){
       r50: num(cells[9].value),
       t: num(cells[10].value),
       matches: num(cells[11].value),
+      height_cm: num(cells[12].value),
+      weight_kg: num(cells[13].value),
+      foot: cells[14].value,
     };
   }).filter(p=>p.name);
 
@@ -601,7 +573,7 @@ async function saveSitePassword(){
 
 async function loadAdmin(){
   renderSourceTiles();
-  await Promise.all([loadRounds(), loadReviews()]);
+  await loadRounds();
 }
 
 // ── ROUNDS ──────────────────────────────────────────────────
@@ -750,89 +722,6 @@ async function deleteRound(num, label){
   if(!confirm('Delete '+label+'? This cannot be undone.')) return;
   await fetch('/api/admin/rounds/'+num, {method:'DELETE',headers:{'x-admin-token':token}});
   loadRounds();
-}
-
-// ── REVIEWS ──────────────────────────────────────────────────
-
-let allReviewsFlat = [];
-
-async function loadReviews(){
-  const data = await fetch('/api/players',{headers:{'x-admin-token':token}}).then(r=>r.json());
-  // flatten for display
-  allReviewsFlat = [];
-  Object.entries(data).forEach(([player, d])=>{
-    d.rounds.forEach(r=>allReviewsFlat.push({player, rd: r.rd, rating: r.rating, comment: r.comment}));
-  });
-  // player suggestions
-  const names = [...new Set(allReviewsFlat.map(r=>r.player))].sort();
-  document.getElementById('playerSuggestions').innerHTML = names.map(n=>`<option value="${n}"/>`).join('');
-  renderReviewList();
-}
-
-const ratingColor = {
-  'Excellent':'#4ecb8d','Above Average':'#7eb8f5','Average':'#9fb5cc',
-  'Below Average':'#c4935a','Well Below Average':'#d47070'
-};
-
-function renderReviewList(){
-  const byPlayer = {};
-  allReviewsFlat.forEach(r=>{if(!byPlayer[r.player])byPlayer[r.player]=[];byPlayer[r.player].push(r);});
-  document.getElementById('reviewList').innerHTML = Object.entries(byPlayer).map(([player, reviews])=>`
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-title">${player}</div>
-      ${reviews.map(r=>`
-        <div class="round-row">
-          <span class="round-short">${r.rd}</span>
-          <span style="flex:1;font-size:12px;color:${ratingColor[r.rating]||'var(--muted)'}">${r.rating}</span>
-          <button class="edit-btn" onclick='editReview(${JSON.stringify(player)},${JSON.stringify(r)})'>Edit</button>
-          <button class="del-btn" onclick='deleteReview(${JSON.stringify(player)},${JSON.stringify(r.rd)})'>✕</button>
-        </div>
-      `).join('')}
-    </div>
-  `).join('') || '<div style="color:var(--muted);font-size:13px">No reviews yet</div>';
-}
-
-function clearReviewForm(){
-  ['rv-player','rv-round','rv-rdlabel','rv-comment'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('rv-rating').value='Average';
-  editingReview=null;
-  document.getElementById('reviewFormTitle').textContent='Add / Edit Player Review';
-  document.getElementById('cancelReviewBtn').style.display='none';
-}
-function cancelReviewEdit(){ clearReviewForm(); }
-
-function editReview(player, r){
-  editingReview = {player, rd: r.rd};
-  document.getElementById('rv-player').value = player;
-  // parse round number from label e.g. "Rd 9" → 9
-  const m = r.rd.match(/\d+/);
-  document.getElementById('rv-round').value = m ? m[0] : '';
-  document.getElementById('rv-rdlabel').value = r.rd;
-  document.getElementById('rv-rating').value = r.rating;
-  document.getElementById('rv-comment').value = r.comment;
-  document.getElementById('reviewFormTitle').textContent = 'Edit '+player+' — '+r.rd;
-  document.getElementById('cancelReviewBtn').style.display='inline-block';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-async function saveReview(){
-  const player = document.getElementById('rv-player').value.trim();
-  const roundNum = parseInt(document.getElementById('rv-round').value);
-  const rdLabel = document.getElementById('rv-rdlabel').value.trim();
-  const rating = document.getElementById('rv-rating').value;
-  const comment = document.getElementById('rv-comment').value.trim();
-  if(!player||!roundNum||!rdLabel||!comment){ showMsg('reviewMsg','All fields are required','err'); return; }
-  const res = await fetch('/api/admin/reviews',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify({player_name:player,round_num:roundNum,round_label:rdLabel,rating,comment})});
-  if(res.ok){ showMsg('reviewMsg','Review saved!','ok'); clearReviewForm(); loadReviews(); }
-  else showMsg('reviewMsg','Error saving review','err');
-}
-
-async function deleteReview(player, rdLabel){
-  if(!confirm('Delete '+player+' '+rdLabel+'?')) return;
-  const m = rdLabel.match(/\d+/);
-  if(!m) return;
-  await fetch('/api/admin/reviews/'+encodeURIComponent(player)+'/'+m[0],{method:'DELETE',headers:{'x-admin-token':token}});
-  loadReviews();
 }
 
 function showMsg(id, text, type){
