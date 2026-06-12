@@ -329,7 +329,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <div class="opp-line-tabs" id="oppLineTabs">
     <button type="button" class="opp-line-tab" data-line="Forwards" onclick="selectOppLine(this)">Forwards</button>
     <button type="button" class="opp-line-tab" data-line="Midfielders" onclick="selectOppLine(this)">Midfielders</button>
-    <button type="button" class="opp-line-tab active" data-line="Backs" onclick="selectOppLine(this)">Backs</button>
+    <button type="button" class="opp-line-tab active" data-line="Defenders" onclick="selectOppLine(this)">Defenders</button>
   </div>
   <div id="oppGrid" class="opp-grid"></div>
 </div>
@@ -753,7 +753,7 @@ function selectOppLine(btn){
 
 function lineForPosition(pos){
   const map = {
-    'Key Def':'Backs', 'Gen Def':'Backs',
+    'Key Def':'Defenders', 'Gen Def':'Defenders',
     'Mid':'Midfielders', 'Mid-Fwd':'Midfielders', 'Ruck':'Midfielders',
     'Gen Fwd':'Forwards', 'Key Fwd':'Forwards'
   };
@@ -764,7 +764,7 @@ async function loadOppositionPage(){
   const activeTile = document.querySelector('.opp-team-tile.active');
   const team = activeTile ? activeTile.dataset.team : '';
   const activeLine = document.querySelector('.opp-line-tab.active');
-  const line = activeLine ? activeLine.dataset.line : 'Backs';
+  const line = activeLine ? activeLine.dataset.line : 'Defenders';
   const grid = document.getElementById('oppGrid');
   if(!team){ grid.innerHTML=''; return; }
   grid.innerHTML = '<p class="hint">Loading...</p>';
@@ -786,15 +786,21 @@ async function loadOppositionPage(){
   players = [...players].sort((a,b)=>(b.likely_selection?1:0)-(a.likely_selection?1:0) || (b.matches??-1)-(a.matches??-1) || a.name.localeCompare(b.name));
   const notesByPlayer = {};
   (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
-  const oppThresholds = { ke_pct:[85,70], m:[6,4], hbg:[1.5,0.8], lbg:[3.5,2], cp:[5,3], up:[10,7], r50:[4,2], hr:[7,4] };
+  const oppThresholds = { ke_pct:[85,70], m:[6,4], hbg:[1.5,0.8], lbg:[3.5,2], cp:[5,3], up:[10,7], r50:[4,2], hr:[7,4], i50:[3,1.5], sa:[1,0.5], c:[2,1], t:[4,2.5] };
   const oppStatClass = (key,val) => {
     if(val===null || val===undefined) return '';
-    const [elite,good] = oppThresholds[key];
+    const thresh = oppThresholds[key];
+    if(!thresh) return '';
+    const [elite,good] = thresh;
     if(val>=elite) return ' opp-stat-elite';
     if(val>=good) return ' opp-stat-good';
     return ' opp-stat-weak';
   };
   const stat = (key,label,val,suffix) => '<div class="opp-stat'+oppStatClass(key,val)+'"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
+  const scoreStat = (g,b) => {
+    const val = (g===null||g===undefined||b===null||b===undefined) ? '—' : g+'G/'+b+'B';
+    return '<div class="opp-stat"><div class="opp-stat-label">Scores</div><div class="opp-stat-val">'+val+'</div></div>';
+  };
   grid.innerHTML = players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
     const photo = p.photo_url
@@ -817,14 +823,23 @@ async function loadOppositionPage(){
       +   '<div class="opp-name">'+p.name+'</div>'
       +   '<div class="opp-pos">'+p.position+(p.matches?' &middot; '+p.matches+' Matches':'')+'</div>'
       +   '<div class="opp-stats">'
-      +     stat('ke_pct','KE%', p.ke_pct, '%')
-      +     stat('m','M', p.m)
-      +     stat('hbg','HBG', p.hbg)
-      +     stat('lbg','LBG', p.lbg)
-      +     stat('cp','CP', p.cp)
-      +     stat('up','UP', p.up)
-      +     stat('r50','R50', p.r50)
-      +     stat('hr','HR', p.hr)
+      +     (line==='Defenders'
+            ? scoreStat(p.g, p.b)
+              + stat('m','M', p.m)
+              + stat('i50','I50', p.i50)
+              + stat('sa','SA', p.sa)
+              + stat('cp','CP', p.cp)
+              + stat('c','C', p.c)
+              + stat('hr','HR', p.hr)
+              + stat('t','T', p.t)
+            : stat('ke_pct','KE%', p.ke_pct, '%')
+              + stat('m','M', p.m)
+              + stat('hbg','HBG', p.hbg)
+              + stat('lbg','LBG', p.lbg)
+              + stat('cp','CP', p.cp)
+              + stat('up','UP', p.up)
+              + stat('r50','R50', p.r50)
+              + stat('hr','HR', p.hr))
       +   '</div>'
       + '</div>'
       + '<div class="opp-notes">'

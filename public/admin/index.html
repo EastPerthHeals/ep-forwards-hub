@@ -266,7 +266,7 @@ select option{background:#1c2333}
         </select>
       </div>
       <div style="background:var(--bg-card2,var(--card));border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;overflow-x:auto">
-        <table class="kpi-table" id="oppTable" style="min-width:1000px">
+        <table class="kpi-table" id="oppTable" style="min-width:1300px">
           <thead><tr>
             <th style="text-align:center">Likely?</th>
             <th>Name</th>
@@ -283,6 +283,12 @@ select option{background:#1c2333}
             <th style="text-align:center">UP</th>
             <th style="text-align:center">R50</th>
             <th style="text-align:center">HR</th>
+            <th style="text-align:center">I50</th>
+            <th style="text-align:center">SA</th>
+            <th style="text-align:center">C</th>
+            <th style="text-align:center">T</th>
+            <th style="text-align:center">G</th>
+            <th style="text-align:center">B</th>
             <th style="text-align:center">Mt</th>
             <th></th>
           </tr></thead>
@@ -349,6 +355,12 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.up)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.hr)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.i50)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.sa)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.c)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.g)+'"></td>'
+    + '<td><input type="number" step="0.1" value="'+num(p.b)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
@@ -396,7 +408,13 @@ async function saveOppositionTeam(){
       up: num(cells[12].value),
       r50: num(cells[13].value),
       hr: num(cells[14].value),
-      matches: num(cells[15].value),
+      i50: num(cells[15].value),
+      sa: num(cells[16].value),
+      c: num(cells[17].value),
+      t: num(cells[18].value),
+      g: num(cells[19].value),
+      b: num(cells[20].value),
+      matches: num(cells[21].value),
     };
   }).filter(p=>p.name);
 
