@@ -281,6 +281,7 @@ select option{background:#1c2333}
             <th style="text-align:center">R50</th>
             <th style="text-align:center">T</th>
             <th style="text-align:center">Mt</th>
+            <th style="text-align:center">Likely?</th>
             <th></th>
           </tr></thead>
           <tbody id="oppTableBody"></tbody>
@@ -346,6 +347,7 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
+    + '<td style="text-align:center"><input type="checkbox"'+(p.likely_selection?' checked':'')+'></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
 }
@@ -392,6 +394,7 @@ async function saveOppositionTeam(){
       r50: num(cells[12].value),
       t: num(cells[13].value),
       matches: num(cells[14].value),
+      likely_selection: cells[15].checked,
     };
   }).filter(p=>p.name);
 

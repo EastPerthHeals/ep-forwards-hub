@@ -117,6 +117,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-team-tile.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
 .opp-grid{display:flex;flex-direction:column;gap:18px}
 .opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
+.opp-likely-banner{background:var(--c-green);color:#0c1f16;writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 4px;flex-shrink:0}
 .opp-photo-col{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
 .opp-photo{width:180px;height:240px;border-radius:12px;object-fit:cover;object-position:top center;background:transparent;flex-shrink:0}
 .opp-photo-placeholder{width:180px;height:240px;border-radius:12px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;color:var(--text-muted)}
@@ -781,7 +782,9 @@ async function loadOppositionPage(){
     const notesList = playerNotes.length
       ? playerNotes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
       : '<p class="hint" style="margin:0">No notes yet — be the first to add one.</p>';
+    const likelyBanner = p.likely_selection ? '<div class="opp-likely-banner">Likely Selection</div>' : '';
     return '<div class="opp-card">'
+      + likelyBanner
       + '<div class="opp-photo-col">' + photo + bio + '</div>'
       + '<div style="flex:1">'
       +   '<div class="opp-name">'+p.name+'</div>'
