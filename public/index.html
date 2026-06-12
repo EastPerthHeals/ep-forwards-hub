@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>East Perth FC — Players Hub 2026</title>
+<title>East Perth Player Hub</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -37,7 +37,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .header-sub{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-left:8px}
 .header-admin{margin-left:auto;font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border);border-radius:6px}
 .header-admin:hover{color:var(--accent-light);border-color:var(--accent)}
-.nav{display:flex;gap:2px;padding:0 24px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:60px;z-index:99}
+.toptabs{display:flex;gap:8px;padding:0 24px;height:44px;box-sizing:border-box;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:60px;z-index:100;align-items:center}
+.toptabs::-webkit-scrollbar{display:none}
+.toptab-btn{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:8px 20px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font)}
+.toptab-btn:hover{border-color:var(--accent);color:var(--text-secondary)}
+.toptab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.nav{display:flex;gap:2px;padding:0 24px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:104px;z-index:99}
 .nav::-webkit-scrollbar{display:none}
 .nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
 .nav-btn:hover{color:var(--text-secondary)}
@@ -192,16 +197,21 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </div>
 <div class="header">
   <img src="/logo.png" alt="East Perth FC" style="height:42px;width:auto;"/>
-  <div><span class="header-title">East Perth FC</span><span class="header-sub">Players Hub &middot; 2026</span></div>
+  <div><span class="header-title">East Perth Player Hub</span><span class="header-sub">2026</span></div>
   <a href="/admin/" class="header-admin">Admin</a>
 </div>
+<div class="toptabs" id="topTabs">
+  <button class="toptab-btn active" data-toptab="Forwards" onclick="showTopTab('Forwards',this)">Forwards</button>
+  <button class="toptab-btn" data-toptab="Midfielders" onclick="showTopTab('Midfielders',this)">Midfielders</button>
+  <button class="toptab-btn" data-toptab="Defenders" onclick="showTopTab('Defenders',this)">Defenders</button>
+</div>
 <div class="nav">
-  <button class="nav-btn" onclick="showPage('kpi',this)">KPI Targets</button>
-  <button class="nav-btn active" onclick="showPage('team',this)">Round by Round</button>
-  <button class="nav-btn" onclick="showPage('season',this)">Season Tracker</button>
-  <button class="nav-btn" onclick="showPage('analysis',this)">Analysis</button>
-  <button class="nav-btn" onclick="showPage('opposition',this)">Opposition</button>
-  <button class="nav-btn" onclick="showPage('gameday',this)">&#9679; Game Day</button>
+  <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('kpi',this)">KPI Targets</button>
+  <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
+  <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('season',this)">Season Tracker</button>
+  <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('analysis',this)">Analysis</button>
+  <button class="nav-btn" data-toptabs="Forwards,Midfielders,Defenders" onclick="showPage('opposition',this)">Opposition</button>
+  <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('gameday',this)">&#9679; Game Day</button>
 </div>
 
 <!-- GAME DAY -->
@@ -466,6 +476,31 @@ function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];c
 
 const GD_PW_KEY = 'ep_gd_unlocked';
 let pendingGameDayBtn = null;
+let currentTopTab = 'Forwards';
+const TOPTAB_OPP_LINE = {Forwards:'Defenders', Midfielders:'Midfielders', Defenders:'Forwards'};
+
+function showTopTab(name,btn){
+  currentTopTab = name;
+  document.querySelectorAll('.toptab-btn').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(nb=>{
+    const tabs = (nb.dataset.toptabs||'').split(',');
+    nb.style.display = tabs.includes(name) ? '' : 'none';
+  });
+  const defaultPage = name==='Forwards' ? 'team' : 'opposition';
+  const defaultBtn = [...document.querySelectorAll('.nav-btn')]
+    .find(nb=>nb.getAttribute('onclick').includes("'"+defaultPage+"'"));
+  showPage(defaultPage, defaultBtn);
+  if(defaultPage==='opposition') applyOppLineForTopTab();
+}
+
+function applyOppLineForTopTab(){
+  const activeTile = document.querySelector('.opp-team-tile.active');
+  if(!activeTile) return;
+  const targetLine = TOPTAB_OPP_LINE[currentTopTab] || 'Defenders';
+  document.querySelectorAll('.opp-line-tab').forEach(t=>t.classList.toggle('active', t.dataset.line===targetLine));
+  loadOppositionPage();
+}
 
 function showPage(n,b){
   if(n==='gameday' && localStorage.getItem(GD_PW_KEY)!=='1'){
@@ -746,6 +781,8 @@ function renderScoreSourcesAnalysis(){
 function selectOppTeam(btn){
   document.querySelectorAll('.opp-team-tile').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
+  const targetLine = TOPTAB_OPP_LINE[currentTopTab] || 'Defenders';
+  document.querySelectorAll('.opp-line-tab').forEach(t=>t.classList.toggle('active', t.dataset.line===targetLine));
   loadOppositionPage();
 }
 
