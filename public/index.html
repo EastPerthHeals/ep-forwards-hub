@@ -759,7 +759,7 @@ async function loadOppositionPage(){
   players = [...players].sort((a,b)=>(b.likely_selection?1:0)-(a.likely_selection?1:0) || (b.matches??-1)-(a.matches??-1) || a.name.localeCompare(b.name));
   const notesByPlayer = {};
   (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
-  const oppThresholds = { ke_pct:[85,70], m:[7,4], hbg:[5,2], lbg:[3.5,2], cp:[5,2], up:[10,7], r50:[4,2], t:[4,2] };
+  const oppThresholds = { ke_pct:[85,70], m:[6,4], hbg:[1.5,0.8], lbg:[3.5,2], cp:[5,3], up:[10,7], r50:[4,2], t:[4,2] };
   const oppStatClass = (key,val) => {
     if(val===null || val===undefined) return '';
     const [elite,good] = oppThresholds[key];
