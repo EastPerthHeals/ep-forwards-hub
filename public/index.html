@@ -829,7 +829,7 @@ async function loadOppositionPage(){
   const oppThresholds = {
     Defenders: { ke_pct:[85,70], m:[6,4], hbg:[1.5,0.8], lbg:[3.5,2], cp:[5,3], up:[10,7], r50:[4,2], hr:[7,4], i50:[3,1.5], sa:[1,0.5], c:[2,1], t:[4,2.5] },
     Midfielders: { cp:[8.5,5.8], up:[13.4,9.6], c:[4,2], um:[3.9,2.9], hr:[8.9,5.6], i50:[3.3,2.4], lbg:[4,2.8], gbg:[6.1,4.6] },
-    Forwards: { m:[4.2,3.3], i50:[2.4,2], sa:[1.1,0.8], cp:[6,4.4], c:[1.3,0.6], hr:[4,2], t:[3.5,2.5] }
+    Forwards: { m:[4.2,3.3], i50:[2.4,2], sa:[1.1,0.8], cp:[6,4.4], c:[1.3,0.6], hr:[4,2], t:[3.5,2.5], score:[2.7,1.9] }
   };
   const oppStatClass = (key,val,ln) => {
     if(val===null || val===undefined) return '';
@@ -842,8 +842,10 @@ async function loadOppositionPage(){
   };
   const stat = (key,label,val,suffix) => '<div class="opp-stat'+oppStatClass(key,val,line)+'"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
   const scoreStat = (g,b) => {
-    const val = (g===null||g===undefined||b===null||b===undefined) ? '—' : g+'G/'+b+'B';
-    return '<div class="opp-stat"><div class="opp-stat-label">Scores</div><div class="opp-stat-val">'+val+'</div></div>';
+    const missing = (g===null||g===undefined||b===null||b===undefined);
+    const val = missing ? '—' : g+'G/'+b+'B';
+    const cls = missing ? '' : oppStatClass('score', g+b, line);
+    return '<div class="opp-stat'+cls+'"><div class="opp-stat-label">Scores</div><div class="opp-stat-val">'+val+'</div></div>';
   };
   grid.innerHTML = players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
