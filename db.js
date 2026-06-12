@@ -72,6 +72,52 @@ async function setSitePassword(newPassword) {
   );
 }
 
+const DEFAULT_GAMEDAY_PASSWORD = process.env.GAMEDAY_PASSWORD || 'gameday';
+
+async function getGamedayPassword() {
+  const database = await connect();
+  const doc = await database.collection('settings').findOne({ _id: 'gameday' });
+  if (doc && doc.password) return doc.password;
+  await database.collection('settings').updateOne(
+    { _id: 'gameday' },
+    { $set: { password: DEFAULT_GAMEDAY_PASSWORD } },
+    { upsert: true }
+  );
+  return DEFAULT_GAMEDAY_PASSWORD;
+}
+
+async function setGamedayPassword(newPassword) {
+  const database = await connect();
+  await database.collection('settings').updateOne(
+    { _id: 'gameday' },
+    { $set: { password: newPassword } },
+    { upsert: true }
+  );
+}
+
+const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'eastperth2026';
+
+async function getAdminPassword() {
+  const database = await connect();
+  const doc = await database.collection('settings').findOne({ _id: 'admin' });
+  if (doc && doc.password) return doc.password;
+  await database.collection('settings').updateOne(
+    { _id: 'admin' },
+    { $set: { password: DEFAULT_ADMIN_PASSWORD } },
+    { upsert: true }
+  );
+  return DEFAULT_ADMIN_PASSWORD;
+}
+
+async function setAdminPassword(newPassword) {
+  const database = await connect();
+  await database.collection('settings').updateOne(
+    { _id: 'admin' },
+    { $set: { password: newPassword } },
+    { upsert: true }
+  );
+}
+
 // All analysis metric keys — used as the default "fully visible" state
 const ALL_ANALYSIS_KEYS = [
   'pct_scores_i50','pct_marks_i50','pct_accuracy','pct_tackles_i50',
@@ -171,4 +217,4 @@ async function deleteRoundNote(id) {
   await database.collection('round_notes').deleteOne({ _id: new ObjectId(id) });
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote };
+module.exports = { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote };

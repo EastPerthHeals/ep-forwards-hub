@@ -205,6 +205,39 @@ select option{background:#1c2333}
       <button class="btn" onclick="saveSitePassword()">Update Password</button>
       <div class="msg" id="sitePwMsg"></div>
     </div>
+
+    <div class="card">
+      <div class="card-title">Game Day Tab Password</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        A second password that locks the Game Day tab specifically — even people with the
+        whole-site password need this to open it. Useful for keeping live Force Rating entry
+        restricted to coaches on game day.
+      </p>
+      <div class="field"><label>Current password</label>
+        <input type="text" id="gd-pw-current" readonly style="opacity:0.7"/>
+      </div>
+      <div class="field"><label>New password</label>
+        <input type="text" id="gd-pw-new" placeholder="Enter a new Game Day password"/>
+      </div>
+      <button class="btn" onclick="saveGamedayPassword()">Update Password</button>
+      <div class="msg" id="gdPwMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Admin Login Password</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        The password used to log into this admin dashboard. Changing it will sign out everyone
+        currently logged in (including you) — you'll need the new password to log back in.
+      </p>
+      <div class="field"><label>Current password</label>
+        <input type="text" id="admin-pw-current" readonly style="opacity:0.7"/>
+      </div>
+      <div class="field"><label>New password</label>
+        <input type="text" id="admin-pw-new" placeholder="Enter a new admin password"/>
+      </div>
+      <button class="btn" onclick="saveAdminPassword()">Update Password</button>
+      <div class="msg" id="adminPwMsg"></div>
+    </div>
   </div>
 
   <!-- ANALYSIS PANEL -->
@@ -327,7 +360,7 @@ function switchTab(name, btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
-  if(name==='access') loadSitePassword();
+  if(name==='access'){ loadSitePassword(); loadGamedayPassword(); loadAdminPassword(); }
   if(name==='analysis') loadAnalysisPanel();
   if(name==='opposition') loadOppositionTeam();
 }
@@ -587,6 +620,83 @@ async function saveSitePassword(){
       msg.className = 'msg ok';
       document.getElementById('site-pw-new').value='';
       loadSitePassword();
+    } else {
+      msg.textContent = 'Could not update password.';
+      msg.className = 'msg err';
+    }
+  }catch(e){
+    msg.textContent = 'Server error — try again.';
+    msg.className = 'msg err';
+  }
+}
+
+async function loadGamedayPassword(){
+  const msg = document.getElementById('gdPwMsg');
+  try{
+    const res = await fetch('/api/admin/gameday-password',{headers:{'x-admin-token':token}}).then(r=>r.json());
+    document.getElementById('gd-pw-current').value = res.password || '';
+  }catch(e){
+    msg.textContent = 'Could not load current password.';
+    msg.className = 'msg err';
+  }
+}
+
+async function saveGamedayPassword(){
+  const msg = document.getElementById('gdPwMsg');
+  const newPw = document.getElementById('gd-pw-new').value.trim();
+  if(!newPw){ msg.textContent='Enter a new password first.'; msg.className='msg err'; return; }
+  msg.textContent = 'Saving...';
+  msg.className = 'msg';
+  try{
+    const res = await fetch('/api/admin/gameday-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({password:newPw})
+    });
+    if(res.ok){
+      msg.textContent = 'Password updated! Anyone with the old Game Day password will need the new one to open that tab.';
+      msg.className = 'msg ok';
+      document.getElementById('gd-pw-new').value='';
+      loadGamedayPassword();
+    } else {
+      msg.textContent = 'Could not update password.';
+      msg.className = 'msg err';
+    }
+  }catch(e){
+    msg.textContent = 'Server error — try again.';
+    msg.className = 'msg err';
+  }
+}
+
+async function loadAdminPassword(){
+  const msg = document.getElementById('adminPwMsg');
+  try{
+    const res = await fetch('/api/admin/admin-password',{headers:{'x-admin-token':token}}).then(r=>r.json());
+    document.getElementById('admin-pw-current').value = res.password || '';
+  }catch(e){
+    msg.textContent = 'Could not load current password.';
+    msg.className = 'msg err';
+  }
+}
+
+async function saveAdminPassword(){
+  const msg = document.getElementById('adminPwMsg');
+  const newPw = document.getElementById('admin-pw-new').value.trim();
+  if(!newPw){ msg.textContent='Enter a new password first.'; msg.className='msg err'; return; }
+  msg.textContent = 'Saving...';
+  msg.className = 'msg';
+  try{
+    const res = await fetch('/api/admin/admin-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-admin-token':token},
+      body:JSON.stringify({password:newPw})
+    });
+    if(res.ok){
+      token = newPw;
+      msg.textContent = 'Password updated! Use the new password next time you log in.';
+      msg.className = 'msg ok';
+      document.getElementById('admin-pw-new').value='';
+      loadAdminPassword();
     } else {
       msg.textContent = 'Could not update password.';
       msg.className = 'msg err';

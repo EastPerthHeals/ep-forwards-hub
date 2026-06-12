@@ -1,25 +1,31 @@
 const express = require('express');
 const path = require('path');
-const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote } = require('./db');
+const { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'eastperth2026';
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.query.token;
-  if (token !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
-  next();
+async function requireAdmin(req, res, next) {
+  try {
+    const token = req.headers['x-admin-token'] || req.query.token;
+    const current = await getAdminPassword();
+    if (token !== current) return res.status(401).json({ error: 'Unauthorized' });
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
 }
 
 async function requireSiteAccess(req, res, next) {
   try {
     // Admins are always allowed through (e.g. the admin panel loading round/review data)
     const adminToken = req.headers['x-admin-token'] || req.query.token;
-    if (adminToken === ADMIN_PASSWORD) return next();
+    const adminPassword = await getAdminPassword();
+    if (adminToken === adminPassword) return next();
 
     const supplied = req.headers['x-site-password'] || req.query.sitePassword;
     const current = await getSitePassword();
@@ -35,6 +41,13 @@ async function requireSiteAccess(req, res, next) {
 app.post('/api/site-login', wrap(async (req, res) => {
   const supplied = (req.body && req.body.password) || '';
   const current = await getSitePassword();
+  res.json({ ok: supplied === current });
+}));
+
+// Lets the Game Day lock screen check a password without needing any other data
+app.post('/api/gameday-login', wrap(async (req, res) => {
+  const supplied = (req.body && req.body.password) || '';
+  const current = await getGamedayPassword();
   res.json({ ok: supplied === current });
 }));
 
@@ -188,6 +201,30 @@ app.post('/api/admin/site-password', requireAdmin, wrap(async (req, res) => {
   const newPassword = (req.body && req.body.password || '').trim();
   if (!newPassword) return res.status(400).json({ error: 'Password cannot be empty' });
   await setSitePassword(newPassword);
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/gameday-password', requireAdmin, wrap(async (req, res) => {
+  const password = await getGamedayPassword();
+  res.json({ password });
+}));
+
+app.post('/api/admin/gameday-password', requireAdmin, wrap(async (req, res) => {
+  const newPassword = (req.body && req.body.password || '').trim();
+  if (!newPassword) return res.status(400).json({ error: 'Password cannot be empty' });
+  await setGamedayPassword(newPassword);
+  res.json({ ok: true });
+}));
+
+app.get('/api/admin/admin-password', requireAdmin, wrap(async (req, res) => {
+  const password = await getAdminPassword();
+  res.json({ password });
+}));
+
+app.post('/api/admin/admin-password', requireAdmin, wrap(async (req, res) => {
+  const newPassword = (req.body && req.body.password || '').trim();
+  if (!newPassword) return res.status(400).json({ error: 'Password cannot be empty' });
+  await setAdminPassword(newPassword);
   res.json({ ok: true });
 }));
 

@@ -464,7 +464,6 @@ async function startPolling(){
 }
 function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];const flds=[{key:'i50',label:'Inside 50s',ph:'e.g. 12'},{key:'score',label:'Score (goal.behind)',ph:'e.g. 3.2'},{key:'tackles',label:'Tackles in I50',ph:'e.g. 4'},{key:'marks',label:'Marks in I50',ph:'e.g. 3'},{key:'oppoR50',label:'Oppo Rebound 50 (count)',ph:'e.g. 3'}];document.getElementById('gd-qtrs').innerHTML=ql.map((l,q)=>'<div class="gd-qtr-card" id="gd-card-'+q+'"><div class="gd-qtr-title">'+l+'</div><div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Force Rating</div><div class="gd-qtr-score" id="gd-qscore-'+q+'" style="color:var(--text-muted)">--</div><div class="gd-qtr-vs" id="gd-qvs-'+q+'"></div>'+flds.map(f=>'<div class="gd-field"><label>'+f.label+'</label><input type="text" inputmode="decimal" value="'+gd[q][f.key]+'" placeholder="'+f.ph+'" oninput="onInput('+q+',\''+f.key+'\',this.value)"/></div>').join('')+'<div id="gd-calcs-'+q+'"></div></div>').join('');updateGD();}
 
-const GD_PW = 'gameday';
 const GD_PW_KEY = 'ep_gd_unlocked';
 let pendingGameDayBtn = null;
 
@@ -483,9 +482,14 @@ function showPage(n,b){
   b.classList.add('active');
 }
 
-function submitGDLock(){
+async function submitGDLock(){
   const val = document.getElementById('gdLockInput').value;
-  if(val === GD_PW){
+  const res = await siteFetch('/api/gameday-login', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({password: val})
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if(res.ok){
     localStorage.setItem(GD_PW_KEY,'1');
     document.getElementById('gdLockOverlay').style.display='none';
     showPage('gameday', pendingGameDayBtn);
