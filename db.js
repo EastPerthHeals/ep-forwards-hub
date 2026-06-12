@@ -191,4 +191,27 @@ async function deleteOppositionNote(id) {
   await database.collection('opposition_notes').deleteOne({ _id: new ObjectId(id) });
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote };
+// ── ROUND OPPOSITION NOTES ────────────────────────────────────────────────────
+
+async function getRoundNotes(roundNum) {
+  const database = await connect();
+  const notes = await database.collection('round_notes')
+    .find({ round_num: roundNum })
+    .sort({ created_at: 1 })
+    .toArray();
+  return notes.map(n => ({ _id: n._id.toString(), round_num: n.round_num, author: n.author, note: n.note, created_at: n.created_at }));
+}
+
+async function addRoundNote(roundNum, author, note) {
+  const database = await connect();
+  const doc = { round_num: roundNum, author, note, created_at: new Date() };
+  const result = await database.collection('round_notes').insertOne(doc);
+  return { _id: result.insertedId.toString(), round_num: roundNum, author, note, created_at: doc.created_at };
+}
+
+async function deleteRoundNote(id) {
+  const database = await connect();
+  await database.collection('round_notes').deleteOne({ _id: new ObjectId(id) });
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote };

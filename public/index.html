@@ -116,6 +116,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .player-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;transition:all 0.2s}
 .player-card:hover{background:var(--bg-card2);border-color:var(--border-hover)}
 .player-card.selected{border-color:var(--accent);background:var(--accent-dim)}
+.opp-team-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.opp-team-tile{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:12px;font-weight:600;padding:10px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:border-color .15s,color .15s}
+.opp-team-tile:hover{border-color:var(--accent);color:var(--text-primary)}
+.opp-team-tile.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
 .opp-grid{display:flex;flex-direction:column;gap:18px}
 .opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
 .opp-photo{width:140px;height:140px;border-radius:12px;object-fit:cover;background:transparent;flex-shrink:0}
@@ -327,19 +331,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 <div id="page-opposition" class="page">
   <p class="section-label" style="margin-bottom:6px">Opposition scouting &mdash; defenders</p>
   <p class="hint" style="margin-bottom:16px">Pick this week's opponent to see their key and general defenders &mdash; KE% (kicking efficiency), marks, hard/loose ball gets, contested &amp; uncontested possessions, and rebound 50s.</p>
-  <div class="field" style="max-width:280px;margin-bottom:20px">
-    <select id="oppTeamPicker" onchange="loadOppositionPage()" style="width:100%;background:var(--bg-card);border:1px solid var(--border);color:var(--text-primary);font-size:13px;padding:10px 12px;border-radius:8px;font-family:var(--font)">
-      <option value="">Select a team&hellip;</option>
-      <option value="Claremont">Claremont</option>
-      <option value="East Fremantle">East Fremantle</option>
-      <option value="Peel Thunder">Peel Thunder</option>
-      <option value="Perth">Perth</option>
-      <option value="South Fremantle">South Fremantle</option>
-      <option value="Subiaco">Subiaco</option>
-      <option value="Swan Districts">Swan Districts</option>
-      <option value="West Coast">West Coast</option>
-      <option value="West Perth">West Perth</option>
-    </select>
+  <div class="opp-team-tiles" id="oppTeamTiles">
+    <button type="button" class="opp-team-tile" data-team="Claremont" onclick="selectOppTeam(this)">Claremont</button>
+    <button type="button" class="opp-team-tile" data-team="East Fremantle" onclick="selectOppTeam(this)">East Fremantle</button>
+    <button type="button" class="opp-team-tile" data-team="Peel Thunder" onclick="selectOppTeam(this)">Peel Thunder</button>
+    <button type="button" class="opp-team-tile" data-team="Perth" onclick="selectOppTeam(this)">Perth</button>
+    <button type="button" class="opp-team-tile" data-team="South Fremantle" onclick="selectOppTeam(this)">South Fremantle</button>
+    <button type="button" class="opp-team-tile" data-team="Subiaco" onclick="selectOppTeam(this)">Subiaco</button>
+    <button type="button" class="opp-team-tile" data-team="Swan Districts" onclick="selectOppTeam(this)">Swan Districts</button>
+    <button type="button" class="opp-team-tile" data-team="West Coast" onclick="selectOppTeam(this)">West Coast</button>
+    <button type="button" class="opp-team-tile" data-team="West Perth" onclick="selectOppTeam(this)">West Perth</button>
   </div>
   <div id="oppGrid" class="opp-grid"></div>
 </div>
@@ -771,8 +772,15 @@ function renderScoreSourcesAnalysis(){
   hint.textContent = 'Based on '+grandTotal+' goals across '+allRounds.filter(r=>r.score_sources&&r.score_sources.length).length+' rounds with recorded score sources. Shows what share of our total goals came from each source this season — e.g. "10 goals out of 100 = 10%".';
 }
 
+function selectOppTeam(btn){
+  document.querySelectorAll('.opp-team-tile').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  loadOppositionPage();
+}
+
 async function loadOppositionPage(){
-  const team = document.getElementById('oppTeamPicker').value;
+  const activeTile = document.querySelector('.opp-team-tile.active');
+  const team = activeTile ? activeTile.dataset.team : '';
   const grid = document.getElementById('oppGrid');
   if(!team){ grid.innerHTML=''; return; }
   grid.innerHTML = '<p class="hint">Loading...</p>';
@@ -872,13 +880,60 @@ function renderTeamContent(i){
   h+='</div><div class="two-col">';
   let left='<div>';
   if(r.score_sources&&r.score_sources.length){left+='<div class="section-label" style="margin-bottom:10px">Score sources</div><div class="score-sources">'+r.score_sources.map(([n,c])=>'<div class="source-row"><span class="source-name">'+n+'</span><span class="source-count">'+c+'</span></div>').join('')+'</div>';}
-  if(r.intercept_fwds!==null&&r.intercept_fwds!==undefined)left+='<div class="notes-box" style="border-color:#4a7fc1;margin-top:16px"><div class="notes-heading" style="color:#6b9fd4">Intercept goals</div>Fwds: <strong>'+r.intercept_fwds+'</strong> &middot; Backs: <strong>'+r.intercept_backs+'</strong> &middot; Mids: <strong>'+r.intercept_mids+'</strong></div>';
+  if(r.intercept_fwds!==null&&r.intercept_fwds!==undefined)left+='<div class="section-label" style="margin-bottom:10px;margin-top:16px;color:#6b9fd4">Intercept goals</div><div class="notes-box" style="border-color:#4a7fc1">Fwds: <strong>'+r.intercept_fwds+'</strong> &middot; Backs: <strong>'+r.intercept_backs+'</strong> &middot; Mids: <strong>'+r.intercept_mids+'</strong></div>';
   left+='</div>';
   let notes='<div>';
-  if(r.learned)notes+='<div class="notes-box"><div class="notes-heading">Things we learned</div>'+r.learned+'</div>';
-  if(r.work_on)notes+='<div class="notes-box" style="border-color:#b03030"><div class="notes-heading" style="color:#e07070">Things to work on</div>'+r.work_on+'</div>';
+  if(r.learned)notes+='<div class="section-label" style="margin-bottom:10px">Things we learned</div><div class="notes-box">'+r.learned+'</div>';
+  if(r.work_on)notes+='<div class="section-label" style="margin-bottom:10px;margin-top:16px;color:#e07070">Things to work on</div><div class="notes-box" style="border-color:#b03030">'+r.work_on+'</div>';
   notes+='</div>';h+=left+notes+'</div>';
+
+  h+='<div class="section-label" style="margin-bottom:10px;margin-top:20px">Opposition Notes — '+r.label+'</div>'
+    +'<div class="notes-box" style="border-color:var(--accent)">'
+    +  '<div class="opp-notes-list" id="roundNotesList"><p class="hint" style="margin:0">Loading...</p></div>'
+    +  '<div class="opp-note-form">'
+    +    '<input type="text" id="roundNoteAuthor" placeholder="Your name" maxlength="40">'
+    +    '<textarea id="roundNoteText" placeholder="What did you think and feel about the opposition this round?" rows="2" maxlength="500"></textarea>'
+    +    '<button type="button" onclick="addRoundNote('+r.round_num+')">Add Note</button>'
+    +  '</div>'
+    +'</div>';
+
   document.getElementById('teamContent').innerHTML=h;
+  loadRoundNotes(r.round_num);
+}
+
+async function loadRoundNotes(roundNum){
+  const list = document.getElementById('roundNotesList');
+  if(!list) return;
+  try{
+    const notes = await siteFetch('/api/round-notes/'+roundNum).then(r=>r.json());
+    list.innerHTML = (notes&&notes.length)
+      ? notes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
+      : '<p class="hint" style="margin:0">No notes yet — be the first to add one.</p>';
+  }catch(e){
+    list.innerHTML = '<p class="hint" style="margin:0">Could not load notes.</p>';
+  }
+}
+
+async function addRoundNote(roundNum){
+  const nameInput = document.getElementById('roundNoteAuthor');
+  const noteInput = document.getElementById('roundNoteText');
+  const author = nameInput.value.trim();
+  const note = noteInput.value.trim();
+  if(!author || !note){ alert('Please enter your name and a note.'); return; }
+  try{
+    const saved = await siteFetch('/api/round-notes/'+roundNum, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({author, note})
+    }).then(r=>r.json());
+    const list = document.getElementById('roundNotesList');
+    if(list.querySelector('.hint')) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', '<div class="opp-note"><span class="opp-note-author">'+escapeHtml(saved.author)+':</span>'+escapeHtml(saved.note)+'</div>');
+    nameInput.value = '';
+    noteInput.value = '';
+  }catch(e){
+    alert('Could not save note — please try again.');
+  }
 }
 
 function boot(){

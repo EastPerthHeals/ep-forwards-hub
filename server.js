@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote } = require('./db');
+const { load, save, getSitePassword, setSitePassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -87,6 +87,24 @@ app.post('/api/opposition-notes/:team/:player', requireSiteAccess, wrap(async (r
 
 app.delete('/api/opposition-notes/:id', requireSiteAccess, wrap(async (req, res) => {
   await deleteOppositionNote(req.params.id);
+  res.json({ ok: true });
+}));
+
+app.get('/api/round-notes/:num', requireSiteAccess, wrap(async (req, res) => {
+  const notes = await getRoundNotes(parseInt(req.params.num));
+  res.json(notes);
+}));
+
+app.post('/api/round-notes/:num', requireSiteAccess, wrap(async (req, res) => {
+  const author = ((req.body && req.body.author) || '').trim();
+  const note = ((req.body && req.body.note) || '').trim();
+  if (!note) return res.status(400).json({ error: 'Note text is required' });
+  const doc = await addRoundNote(parseInt(req.params.num), author || 'Anonymous', note);
+  res.json(doc);
+}));
+
+app.delete('/api/round-notes/:id', requireSiteAccess, wrap(async (req, res) => {
+  await deleteRoundNote(req.params.id);
   res.json({ ok: true });
 }));
 
