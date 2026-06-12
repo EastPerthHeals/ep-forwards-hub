@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>East Perth FC — Forwards Hub 2026</title>
+<title>East Perth FC — Players Hub 2026</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -115,6 +115,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-team-tile{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:12px;font-weight:600;padding:10px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:border-color .15s,color .15s}
 .opp-team-tile:hover{border-color:var(--accent);color:var(--text-primary)}
 .opp-team-tile.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+.opp-line-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
+.opp-line-tab{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;padding:8px 18px;border-radius:20px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.opp-line-tab:hover{border-color:var(--accent);color:var(--text-primary)}
+.opp-line-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .opp-grid{display:flex;flex-direction:column;gap:18px}
 .opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
 .opp-likely-banner{background:var(--c-green);color:#0c1f16;writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 4px;flex-shrink:0}
@@ -188,7 +192,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </div>
 <div class="header">
   <img src="/logo.png" alt="East Perth FC" style="height:42px;width:auto;"/>
-  <div><span class="header-title">East Perth FC</span><span class="header-sub">Forwards Hub &middot; 2026</span></div>
+  <div><span class="header-title">East Perth FC</span><span class="header-sub">Players Hub &middot; 2026</span></div>
   <a href="/admin/" class="header-admin">Admin</a>
 </div>
 <div class="nav">
@@ -309,8 +313,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 
 <!-- OPPOSITION -->
 <div id="page-opposition" class="page">
-  <p class="section-label" style="margin-bottom:6px">Opposition scouting &mdash; defenders</p>
-  <p class="hint" style="margin-bottom:16px">Pick this week's opponent to see their key and general defenders &mdash; KE% (kicking efficiency), marks, hard/loose ball gets, contested &amp; uncontested possessions, and rebound 50s.</p>
+  <p class="section-label" style="margin-bottom:6px">Opposition scouting</p>
+  <p class="hint" style="margin-bottom:16px">Pick this week's opponent, then choose a line to scout &mdash; KE% (kicking efficiency), marks, hard/loose ball gets, contested &amp; uncontested possessions, rebound 50s and handball receives.</p>
   <div class="opp-team-tiles" id="oppTeamTiles">
     <button type="button" class="opp-team-tile" data-team="Claremont" onclick="selectOppTeam(this)">Claremont</button>
     <button type="button" class="opp-team-tile" data-team="East Fremantle" onclick="selectOppTeam(this)">East Fremantle</button>
@@ -321,6 +325,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
     <button type="button" class="opp-team-tile" data-team="Swan Districts" onclick="selectOppTeam(this)">Swan Districts</button>
     <button type="button" class="opp-team-tile" data-team="West Coast" onclick="selectOppTeam(this)">West Coast</button>
     <button type="button" class="opp-team-tile" data-team="West Perth" onclick="selectOppTeam(this)">West Perth</button>
+  </div>
+  <div class="opp-line-tabs" id="oppLineTabs">
+    <button type="button" class="opp-line-tab" data-line="Forwards" onclick="selectOppLine(this)">Forwards</button>
+    <button type="button" class="opp-line-tab" data-line="Midfielders" onclick="selectOppLine(this)">Midfielders</button>
+    <button type="button" class="opp-line-tab active" data-line="Backs" onclick="selectOppLine(this)">Backs</button>
   </div>
   <div id="oppGrid" class="opp-grid"></div>
 </div>
@@ -736,9 +745,25 @@ function selectOppTeam(btn){
   loadOppositionPage();
 }
 
+function selectOppLine(btn){
+  document.querySelectorAll('.opp-line-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  loadOppositionPage();
+}
+
+function lineForPosition(pos){
+  if(!pos) return null;
+  if(pos.includes('Def')) return 'Backs';
+  if(pos.includes('Fwd')) return 'Forwards';
+  if(pos.includes('Mid')) return 'Midfielders';
+  return null;
+}
+
 async function loadOppositionPage(){
   const activeTile = document.querySelector('.opp-team-tile.active');
   const team = activeTile ? activeTile.dataset.team : '';
+  const activeLine = document.querySelector('.opp-line-tab.active');
+  const line = activeLine ? activeLine.dataset.line : 'Backs';
   const grid = document.getElementById('oppGrid');
   if(!team){ grid.innerHTML=''; return; }
   grid.innerHTML = '<p class="hint">Loading...</p>';
@@ -752,8 +777,9 @@ async function loadOppositionPage(){
     grid.innerHTML = '<p class="hint">Could not load this team — try again.</p>';
     return;
   }
-  if(!players || !players.length){
-    grid.innerHTML = '<p class="hint">No defender data has been added for '+team+' yet.</p>';
+  players = (players||[]).filter(p=>lineForPosition(p.position)===line);
+  if(!players.length){
+    grid.innerHTML = '<p class="hint">No '+line.toLowerCase()+' data has been added for '+team+' yet.</p>';
     return;
   }
   players = [...players].sort((a,b)=>(b.likely_selection?1:0)-(a.likely_selection?1:0) || (b.matches??-1)-(a.matches??-1) || a.name.localeCompare(b.name));
