@@ -495,11 +495,10 @@ function showTopTab(name,btn){
 }
 
 function applyOppLineForTopTab(){
-  const activeTile = document.querySelector('.opp-team-tile.active');
-  if(!activeTile) return;
   const targetLine = TOPTAB_OPP_LINE[currentTopTab] || 'Defenders';
   document.querySelectorAll('.opp-line-tab').forEach(t=>t.classList.toggle('active', t.dataset.line===targetLine));
-  loadOppositionPage();
+  const activeTile = document.querySelector('.opp-team-tile.active');
+  if(activeTile) loadOppositionPage();
 }
 
 function showPage(n,b){
