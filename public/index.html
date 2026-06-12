@@ -788,7 +788,7 @@ async function loadOppositionPage(){
       + '<div class="opp-photo-col">' + photo + bio + '</div>'
       + '<div style="flex:1">'
       +   '<div class="opp-name">'+p.name+'</div>'
-      +   '<div class="opp-pos">'+p.position+'</div>'
+      +   '<div class="opp-pos">'+p.position+(p.matches?' &middot; '+p.matches+' Mt':'')+'</div>'
       +   '<div class="opp-stats">'
       +     stat('ke_pct','KE%', p.ke_pct, '%')
       +     stat('m','M', p.m)
