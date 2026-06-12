@@ -266,6 +266,7 @@ select option{background:#1c2333}
       <div style="background:var(--bg-card2,var(--card));border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:16px 0;overflow-x:auto">
         <table class="kpi-table" id="oppTable" style="min-width:1000px">
           <thead><tr>
+            <th style="text-align:center">Likely?</th>
             <th>Name</th>
             <th>Position</th>
             <th>Photo URL</th>
@@ -281,7 +282,6 @@ select option{background:#1c2333}
             <th style="text-align:center">R50</th>
             <th style="text-align:center">T</th>
             <th style="text-align:center">Mt</th>
-            <th style="text-align:center">Likely?</th>
             <th></th>
           </tr></thead>
           <tbody id="oppTableBody"></tbody>
@@ -332,6 +332,7 @@ function oppRowHtml(p){
   const posOptions = OPP_POSITIONS.map(pos=>'<option value="'+pos+'"'+(p.position===pos?' selected':'')+'>'+pos+'</option>').join('');
   const num = v => (v===undefined||v===null) ? '' : v;
   return '<tr>'
+    + '<td style="text-align:center"><input type="checkbox"'+(p.likely_selection?' checked':'')+'></td>'
     + '<td><input type="text" value="'+(p.name||'').replace(/"/g,'&quot;')+'" placeholder="B.Surname"></td>'
     + '<td><select>'+posOptions+'</select></td>'
     + '<td><input type="text" value="'+(p.photo_url||'').replace(/"/g,'&quot;')+'" placeholder="https://..."></td>'
@@ -347,7 +348,6 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
-    + '<td style="text-align:center"><input type="checkbox"'+(p.likely_selection?' checked':'')+'></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
 }
@@ -379,22 +379,22 @@ async function saveOppositionTeam(){
     const cells = row.querySelectorAll('input,select');
     const num = v => v==='' ? null : Number(v);
     return {
-      name: cells[0].value.trim(),
-      position: cells[1].value,
-      photo_url: cells[2].value.trim(),
-      height_cm: num(cells[3].value),
-      weight_kg: num(cells[4].value),
-      foot: cells[5].value,
-      ke_pct: num(cells[6].value),
-      m: num(cells[7].value),
-      hbg: num(cells[8].value),
-      lbg: num(cells[9].value),
-      cp: num(cells[10].value),
-      up: num(cells[11].value),
-      r50: num(cells[12].value),
-      t: num(cells[13].value),
-      matches: num(cells[14].value),
-      likely_selection: cells[15].checked,
+      likely_selection: cells[0].checked,
+      name: cells[1].value.trim(),
+      position: cells[2].value,
+      photo_url: cells[3].value.trim(),
+      height_cm: num(cells[4].value),
+      weight_kg: num(cells[5].value),
+      foot: cells[6].value,
+      ke_pct: num(cells[7].value),
+      m: num(cells[8].value),
+      hbg: num(cells[9].value),
+      lbg: num(cells[10].value),
+      cp: num(cells[11].value),
+      up: num(cells[12].value),
+      r50: num(cells[13].value),
+      t: num(cells[14].value),
+      matches: num(cells[15].value),
     };
   }).filter(p=>p.name);
 
