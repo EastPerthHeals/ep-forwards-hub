@@ -269,6 +269,9 @@ select option{background:#1c2333}
             <th>Name</th>
             <th>Position</th>
             <th>Photo URL</th>
+            <th style="text-align:center">Height (cm)</th>
+            <th style="text-align:center">Weight (kg)</th>
+            <th style="text-align:center">Foot</th>
             <th style="text-align:center">KE%</th>
             <th style="text-align:center">M</th>
             <th style="text-align:center">HBG</th>
@@ -278,9 +281,6 @@ select option{background:#1c2333}
             <th style="text-align:center">R50</th>
             <th style="text-align:center">T</th>
             <th style="text-align:center">Mt</th>
-            <th style="text-align:center">Height (cm)</th>
-            <th style="text-align:center">Weight (kg)</th>
-            <th style="text-align:center">Foot</th>
             <th></th>
           </tr></thead>
           <tbody id="oppTableBody"></tbody>
@@ -334,6 +334,9 @@ function oppRowHtml(p){
     + '<td><input type="text" value="'+(p.name||'').replace(/"/g,'&quot;')+'" placeholder="B.Surname"></td>'
     + '<td><select>'+posOptions+'</select></td>'
     + '<td><input type="text" value="'+(p.photo_url||'').replace(/"/g,'&quot;')+'" placeholder="https://..."></td>'
+    + '<td><input type="number" step="1" value="'+num(p.height_cm)+'"></td>'
+    + '<td><input type="number" step="1" value="'+num(p.weight_kg)+'"></td>'
+    + '<td><select><option value=""'+(!p.foot?' selected':'')+'>—</option><option value="Right"'+(p.foot==='Right'?' selected':'')+'>Right</option><option value="Left"'+(p.foot==='Left'?' selected':'')+'>Left</option></select></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.ke_pct)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.m)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.hbg)+'"></td>'
@@ -343,9 +346,6 @@ function oppRowHtml(p){
     + '<td><input type="number" step="0.1" value="'+num(p.r50)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.t)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.matches)+'"></td>'
-    + '<td><input type="number" step="1" value="'+num(p.height_cm)+'"></td>'
-    + '<td><input type="number" step="1" value="'+num(p.weight_kg)+'"></td>'
-    + '<td><select><option value=""'+(!p.foot?' selected':'')+'>—</option><option value="Right"'+(p.foot==='Right'?' selected':'')+'>Right</option><option value="Left"'+(p.foot==='Left'?' selected':'')+'>Left</option></select></td>'
     + '<td><button class="del-btn" onclick="this.closest(\'tr\').remove()">Remove</button></td>'
     + '</tr>';
 }
@@ -380,18 +380,18 @@ async function saveOppositionTeam(){
       name: cells[0].value.trim(),
       position: cells[1].value,
       photo_url: cells[2].value.trim(),
-      ke_pct: num(cells[3].value),
-      m: num(cells[4].value),
-      hbg: num(cells[5].value),
-      lbg: num(cells[6].value),
-      cp: num(cells[7].value),
-      up: num(cells[8].value),
-      r50: num(cells[9].value),
-      t: num(cells[10].value),
-      matches: num(cells[11].value),
-      height_cm: num(cells[12].value),
-      weight_kg: num(cells[13].value),
-      foot: cells[14].value,
+      height_cm: num(cells[3].value),
+      weight_kg: num(cells[4].value),
+      foot: cells[5].value,
+      ke_pct: num(cells[6].value),
+      m: num(cells[7].value),
+      hbg: num(cells[8].value),
+      lbg: num(cells[9].value),
+      cp: num(cells[10].value),
+      up: num(cells[11].value),
+      r50: num(cells[12].value),
+      t: num(cells[13].value),
+      matches: num(cells[14].value),
     };
   }).filter(p=>p.name);
 
