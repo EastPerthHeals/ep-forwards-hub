@@ -122,13 +122,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-team-tile.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
 .opp-grid{display:flex;flex-direction:column;gap:18px}
 .opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
-.opp-photo{width:140px;height:140px;border-radius:12px;object-fit:cover;background:transparent;flex-shrink:0}
-.opp-photo-placeholder{width:140px;height:140px;border-radius:12px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:600;color:var(--text-muted)}
-.opp-name{font-size:16px;font-weight:600;margin-bottom:4px}
-.opp-pos{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-dim2);border-radius:6px;padding:2px 8px;margin-bottom:8px}
-.opp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px 10px}
-.opp-stat-label{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
-.opp-stat-val{font-size:13px;font-weight:600}
+.opp-photo{width:180px;height:240px;border-radius:12px;object-fit:cover;object-position:top center;background:transparent;flex-shrink:0}
+.opp-photo-placeholder{width:180px;height:240px;border-radius:12px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;color:var(--text-muted)}
+.opp-name{font-size:18px;font-weight:600;margin-bottom:4px}
+.opp-pos{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-dim2);border-radius:6px;padding:2px 8px;margin-bottom:12px}
+.opp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.opp-stat{background:var(--bg-card2);border-radius:10px;padding:12px 8px;text-align:center}
+.opp-stat-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
+.opp-stat-val{font-size:24px;font-weight:700;color:var(--text-primary)}
 .opp-notes{flex-basis:100%;margin-top:10px;padding-top:14px;border-top:1px solid var(--border)}
 .opp-notes-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
 .opp-note{background:var(--bg-card2);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px;line-height:1.4}
@@ -802,7 +803,7 @@ async function loadOppositionPage(){
   players = [...players].sort((a,b)=>(order[a.position]??2)-(order[b.position]??2) || a.name.localeCompare(b.name));
   const notesByPlayer = {};
   (notes||[]).forEach(n=>{ (notesByPlayer[n.player] = notesByPlayer[n.player] || []).push(n); });
-  const stat = (label,val,suffix) => '<div><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
+  const stat = (label,val,suffix) => '<div class="opp-stat"><div class="opp-stat-label">'+label+'</div><div class="opp-stat-val">'+(val===null||val===undefined?'—':val+(suffix||''))+'</div></div>';
   grid.innerHTML = players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
     const photo = p.photo_url
