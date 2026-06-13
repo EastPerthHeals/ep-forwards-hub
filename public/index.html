@@ -130,7 +130,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-photo-col{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
 .opp-photo{width:180px;height:240px;border-radius:12px;object-fit:cover;object-position:top center;background:transparent;flex-shrink:0}
 .opp-photo-placeholder{width:180px;height:240px;border-radius:12px;background:var(--bg-card2);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:48px;font-weight:600;color:var(--text-muted)}
-.opp-bio{font-size:11px;color:var(--text-muted);text-align:center}
+.opp-bio{font-size:14px;font-weight:700;color:var(--text-primary);text-align:center;line-height:1.5}
+.opp-bio-foot{font-size:14px;font-weight:700;color:var(--text-primary);text-align:center}
 .opp-name{font-size:18px;font-weight:600;margin-bottom:4px}
 .opp-pos{display:inline-block;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-light);background:var(--accent-dim2);border-radius:6px;padding:2px 8px;margin-bottom:12px}
 .opp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
@@ -855,8 +856,8 @@ async function loadOppositionPage(){
     const bioParts = [];
     if(p.height_cm) bioParts.push(p.height_cm+'cm');
     if(p.weight_kg) bioParts.push(p.weight_kg+'kg');
-    if(p.foot) bioParts.push(p.foot+' Foot');
     const bio = bioParts.length ? '<div class="opp-bio">'+bioParts.join(' &middot; ')+'</div>' : '';
+    const bioFoot = p.foot ? '<div class="opp-bio-foot">'+p.foot+' Foot</div>' : '';
     const playerNotes = notesByPlayer[p.name] || [];
     const notesList = playerNotes.length
       ? playerNotes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
@@ -864,7 +865,7 @@ async function loadOppositionPage(){
     const likelyBanner = p.likely_selection ? '<div class="opp-likely-banner">Likely Selection</div>' : '';
     return '<div class="opp-card">'
       + likelyBanner
-      + '<div class="opp-photo-col">' + photo + bio + '</div>'
+      + '<div class="opp-photo-col">' + photo + bio + bioFoot + '</div>'
       + '<div style="flex:1">'
       +   '<div class="opp-name">'+p.name+'</div>'
       +   '<div class="opp-pos">'+p.position+(p.matches?' &middot; '+p.matches+' Matches':'')+'</div>'
