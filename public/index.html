@@ -557,12 +557,13 @@ async function loadData(){
 }
 
 function renderSeasonSummary(){
-  const forces=allRounds.map(r=>r.force_avg);
+  const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
+  const forces=playedRounds.map(r=>r.force_avg);
   const wls=allRounds.map(r=>r.wl);
   if(!forces.length){document.getElementById('seasonSummaryGrid').innerHTML='';return;}
   const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length*100)/100;
   const best=Math.max(...forces);
-  const bestRd=allRounds[forces.indexOf(best)];
+  const bestRd=playedRounds[forces.indexOf(best)];
   const above=forces.filter(f=>f>=195).length;
   const wins=wls.filter(w=>w==='W').length,losses=wls.filter(w=>w==='L').length;
   document.getElementById('seasonSummaryGrid').innerHTML=`
@@ -603,9 +604,10 @@ function renderMetricTable(){
 }
 
 function renderSeasonCharts(){
-  const forces=allRounds.map(r=>r.force_avg);
-  const labels=allRounds.map(r=>r.short);
-  const wls=allRounds.map(r=>r.wl);
+  const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
+  const forces=playedRounds.map(r=>r.force_avg);
+  const labels=playedRounds.map(r=>r.short);
+  const wls=playedRounds.map(r=>r.wl);
   const bc=forces.map((_,i)=>wls[i]==='W'?'#3b9e6e':'#b03030');
   const mkChart=(id,lbls,data,colors)=>{
     const el=document.getElementById(id);
@@ -943,6 +945,10 @@ async function addOppNote(btn, team, player){
 
 function renderTeamContent(i){
   const r=allRounds[i];const avg=r.force_avg;
+  if(r.wl==='BYE'){
+    document.getElementById('teamContent').innerHTML='<div class="force-total"><div><div class="force-label">'+r.label+'</div><div class="force-score" style="color:var(--text-muted)">BYE</div><div class="force-target">No game this round</div></div></div>';
+    return;
+  }
   const metricDefs=[{label:'Inside 50s',col:'i50',key:'i50',target:12},{label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},{label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},{label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},{label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},{label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25}];
   let h='<div class="force-total"><div><div class="force-label">Force Rating — '+r.label+' <span style="font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;background:'+(r.wl==='W'?'rgba(59,158,110,0.2)':'rgba(192,57,43,0.2)')+';color:'+(r.wl==='W'?'#4ecb8d':'#e07070')+'">'+(r.wl==='W'?'WIN':'LOSS')+'</span></div><div class="force-score" style="color:'+col('force',avg)+'">'+avg+'</div><div class="force-target">Target: 195</div></div>';
   if(r.force_q1||r.force_q2||r.force_q3||r.force_q4){h+='<div class="quarters">'+['Q1','Q2','Q3','Q4'].map((q,qi)=>{const v=[r.force_q1,r.force_q2,r.force_q3,r.force_q4][qi];return v?'<div class="quarter-pill"><div class="qtr-label-sm">'+q+'</div><div class="qtr-val" style="color:'+col('force',v)+'">'+v+'</div></div>':'';}).join('')+'</div>';}
