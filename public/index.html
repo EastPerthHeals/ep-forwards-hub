@@ -93,6 +93,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .round-tab{background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:500;padding:6px 14px;border-radius:20px;cursor:pointer;transition:all 0.2s;font-family:var(--font)}
 .round-tab:hover{border-color:var(--accent);color:var(--accent-light)}
 .round-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.qtr-toggle{display:flex;gap:4px;flex-wrap:wrap}
+.qtr-toggle-btn{background:var(--bg-card);border:1px solid var(--border);color:var(--text-muted);font-size:10px;font-weight:600;letter-spacing:0.5px;padding:5px 11px;border-radius:14px;cursor:pointer;transition:all 0.15s;font-family:var(--font)}
+.qtr-toggle-btn:hover{border-color:var(--accent);color:var(--accent-light)}
+.qtr-toggle-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
 @media(max-width:600px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
 .metric-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
@@ -943,6 +947,9 @@ async function addOppNote(btn, team, player){
   }
 }
 
+let selectedMetricQuarter='TOTAL';
+function selectMetricQuarter(i,q){ selectedMetricQuarter=q; renderTeamContent(i); }
+
 function renderTeamContent(i){
   const r=allRounds[i];const avg=r.force_avg;
   if(r.wl==='BYE'){
@@ -952,8 +959,16 @@ function renderTeamContent(i){
   const metricDefs=[{label:'Inside 50s',col:'i50',key:'i50',target:12},{label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},{label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},{label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},{label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},{label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25}];
   let h='<div class="force-total"><div><div class="force-label">Force Rating — '+r.label+' <span style="font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;background:'+(r.wl==='W'?'rgba(59,158,110,0.2)':'rgba(192,57,43,0.2)')+';color:'+(r.wl==='W'?'#4ecb8d':'#e07070')+'">'+(r.wl==='W'?'WIN':'LOSS')+'</span></div><div class="force-score" style="color:'+col('force',avg)+'">'+avg+'</div><div class="force-target">Target: 195</div></div>';
   if(r.force_q1||r.force_q2||r.force_q3||r.force_q4){h+='<div class="quarters">'+['Q1','Q2','Q3','Q4'].map((q,qi)=>{const v=[r.force_q1,r.force_q2,r.force_q3,r.force_q4][qi];return v?'<div class="quarter-pill"><div class="qtr-label-sm">'+q+'</div><div class="qtr-val" style="color:'+col('force',v)+'">'+v+'</div></div>':'';}).join('')+'</div>';}
-  h+='</div><div class="section-label" style="margin-bottom:12px">Metrics</div><div class="metrics-grid">';
-  metricDefs.forEach(m=>{const v=r[m.col];if(v===null||v===undefined)return;const c2=col(m.key,v),bc=barCol(m.key,v),p=barPct(m.key,v);h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:'+c2+'">'+Math.round(v*10)/10+'</div><div class="metric-target">Target: '+m.target+'</div><div class="metric-bar"><div class="metric-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';});
+  h+='</div><div class="section-label" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><span>Metrics</span><div class="qtr-toggle">'
+    +['Q1','Q2','Q3','Q4','TOTAL'].map(q=>'<button type="button" class="qtr-toggle-btn'+(selectedMetricQuarter===q?' active':'')+'" onclick="selectMetricQuarter('+i+',\''+q+'\')">'+q+'</button>').join('')
+    +'</div></div><div class="metrics-grid">';
+  const qSuffix = selectedMetricQuarter==='TOTAL' ? null : '_q'+selectedMetricQuarter.slice(1);
+  metricDefs.forEach(m=>{
+    const v=qSuffix ? r[m.col+qSuffix] : r[m.col];
+    if(v===null||v===undefined){h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:var(--text-muted)">—</div><div class="metric-target">Target: '+m.target+'</div></div>';return;}
+    const c2=col(m.key,v),bc=barCol(m.key,v),p=barPct(m.key,v);
+    h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:'+c2+'">'+Math.round(v*10)/10+'</div><div class="metric-target">Target: '+m.target+'</div><div class="metric-bar"><div class="metric-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';
+  });
   h+='</div><div class="two-col">';
   let left='<div>';
   if(r.score_sources&&r.score_sources.length){left+='<div class="section-label" style="margin-bottom:10px">Score sources</div><div class="score-sources">'+r.score_sources.map(([n,c])=>'<div class="source-row"><span class="source-name">'+n+'</span><span class="source-count">'+c+'</span></div>').join('')+'</div>';}

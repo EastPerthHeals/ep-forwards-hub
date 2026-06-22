@@ -134,7 +134,7 @@ select option{background:#1c2333}
       <div class="field"><label>Full label</label><input type="text" id="r-label" placeholder="Rd 9 - Opponent"/></div>
       <div class="grid2">
         <div class="field"><label>Result</label>
-          <select id="r-wl"><option value="W">Win</option><option value="L">Loss</option><option value="D">Draw</option></select>
+          <select id="r-wl"><option value="W">Win</option><option value="L">Loss</option><option value="D">Draw</option><option value="BYE">Bye</option></select>
         </div>
         <div class="field"><label>Force Rating (avg)</label><input type="number" id="r-force" placeholder=""/></div>
       </div>
@@ -147,7 +147,7 @@ select option{background:#1c2333}
         <div class="field"><label>Q4</label><input type="number" id="r-q4" placeholder=""/></div>
       </div>
 
-      <div class="section-label">Metrics</div>
+      <div class="section-label">Metrics (season total/avg)</div>
       <div class="grid3">
         <div class="field"><label>Inside 50s (avg/qtr)</label><input type="number" id="r-i50" placeholder=""/></div>
         <div class="field"><label>% Scores I50</label><input type="number" id="r-scores" placeholder=""/></div>
@@ -156,6 +156,26 @@ select option{background:#1c2333}
         <div class="field"><label>% Marks I50</label><input type="number" id="r-marks" placeholder=""/></div>
         <div class="field"><label>% Oppo R50</label><input type="number" id="r-oppo" placeholder=""/></div>
       </div>
+
+      <div class="section-label">Metrics by quarter (optional — enables the Q1-Q4 toggle on the public site)</div>
+      <div class="field"><label>Inside 50s</label><div class="grid4">
+        <input type="number" id="r-i50-q1" placeholder="Q1"/><input type="number" id="r-i50-q2" placeholder="Q2"/><input type="number" id="r-i50-q3" placeholder="Q3"/><input type="number" id="r-i50-q4" placeholder="Q4"/>
+      </div></div>
+      <div class="field"><label>% Scores I50</label><div class="grid4">
+        <input type="number" id="r-scores-q1" placeholder="Q1"/><input type="number" id="r-scores-q2" placeholder="Q2"/><input type="number" id="r-scores-q3" placeholder="Q3"/><input type="number" id="r-scores-q4" placeholder="Q4"/>
+      </div></div>
+      <div class="field"><label>% Accuracy</label><div class="grid4">
+        <input type="number" id="r-acc-q1" placeholder="Q1"/><input type="number" id="r-acc-q2" placeholder="Q2"/><input type="number" id="r-acc-q3" placeholder="Q3"/><input type="number" id="r-acc-q4" placeholder="Q4"/>
+      </div></div>
+      <div class="field"><label>% Tackles I50</label><div class="grid4">
+        <input type="number" id="r-tack-q1" placeholder="Q1"/><input type="number" id="r-tack-q2" placeholder="Q2"/><input type="number" id="r-tack-q3" placeholder="Q3"/><input type="number" id="r-tack-q4" placeholder="Q4"/>
+      </div></div>
+      <div class="field"><label>% Marks I50</label><div class="grid4">
+        <input type="number" id="r-marks-q1" placeholder="Q1"/><input type="number" id="r-marks-q2" placeholder="Q2"/><input type="number" id="r-marks-q3" placeholder="Q3"/><input type="number" id="r-marks-q4" placeholder="Q4"/>
+      </div></div>
+      <div class="field"><label>% Oppo R50</label><div class="grid4">
+        <input type="number" id="r-oppo-q1" placeholder="Q1"/><input type="number" id="r-oppo-q2" placeholder="Q2"/><input type="number" id="r-oppo-q3" placeholder="Q3"/><input type="number" id="r-oppo-q4" placeholder="Q4"/>
+      </div></div>
 
       <div class="section-label">Score sources</div>
       <div class="source-tiles" id="sourceTiles"></div>
@@ -783,10 +803,14 @@ function addSourceFromTile(name){
   addSource(name, num);
 }
 
+const QTR_METRIC_IDS = ['r-i50','r-scores','r-acc','r-tack','r-marks','r-oppo'];
+const QTR_METRIC_FIELDS = {'r-i50':'i50','r-scores':'pct_scores_i50','r-acc':'pct_accuracy','r-tack':'pct_tackles_i50','r-marks':'pct_marks_i50','r-oppo':'pct_oppo_r50'};
+
 function clearRoundForm(){
   ['r-num','r-short','r-opp','r-label','r-force','r-q1','r-q2','r-q3','r-q4',
    'r-i50','r-scores','r-acc','r-tack','r-marks','r-oppo','r-if','r-ib','r-im',
    'r-learned','r-workOn'].forEach(id=>document.getElementById(id).value='');
+  QTR_METRIC_IDS.forEach(id=>[1,2,3,4].forEach(q=>document.getElementById(id+'-q'+q).value=''));
   document.getElementById('r-wl').value='W';
   document.getElementById('sourcesList').innerHTML='';
   editingRound = null;
@@ -816,6 +840,10 @@ function editRound(num){
   document.getElementById('r-tack').value = r.pct_tackles_i50||'';
   document.getElementById('r-marks').value = r.pct_marks_i50||'';
   document.getElementById('r-oppo').value = r.pct_oppo_r50||'';
+  QTR_METRIC_IDS.forEach(id=>{
+    const field = QTR_METRIC_FIELDS[id];
+    [1,2,3,4].forEach(q=>document.getElementById(id+'-q'+q).value = r[field+'_q'+q] ?? '');
+  });
   document.getElementById('r-if').value = r.intercept_fwds||'';
   document.getElementById('r-ib').value = r.intercept_backs||'';
   document.getElementById('r-im').value = r.intercept_mids||'';
@@ -848,7 +876,11 @@ async function saveRound(){
     learned: getVal('r-learned'), work_on: getVal('r-workOn'),
     score_sources: getSources(),
   };
-  if(!payload.force_avg){ showMsg('roundMsg','Force Rating (avg) is required','err'); return; }
+  QTR_METRIC_IDS.forEach(id=>{
+    const field = QTR_METRIC_FIELDS[id];
+    [1,2,3,4].forEach(q=>payload[field+'_q'+q] = getNum(id+'-q'+q));
+  });
+  if(payload.wl!=='BYE' && !payload.force_avg){ showMsg('roundMsg','Force Rating (avg) is required','err'); return; }
   const res = await fetch('/api/admin/rounds', {method:'POST',headers:{'Content-Type':'application/json','x-admin-token':token},body:JSON.stringify(payload)});
   if(res.ok){ showMsg('roundMsg','Round saved!','ok'); showToast('Round saved!'); clearRoundForm(); loadRounds(); }
   else { showMsg('roundMsg','Error saving round','err'); showToast('Error saving round','err'); }
