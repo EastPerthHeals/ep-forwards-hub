@@ -390,15 +390,29 @@ function switchTab(name, btn){
 // ── OPPOSITION PANEL ─────────────────────────────────────────────────────────
 
 const OPP_POSITIONS = ['Key Def','Gen Def','Mid','Mid-Fwd','Ruck','Gen Fwd','Key Fwd'];
+const OPP_POSITION_GROUP = {'Key Def':0,'Gen Def':0,'Ruck':1,'Mid':2,'Mid-Fwd':2,'Gen Fwd':3,'Key Fwd':3};
+
+function sortOppRows(){
+  const tbody = document.getElementById('oppTableBody');
+  const rows = [...tbody.querySelectorAll('tr')];
+  rows.sort((a,b)=>{
+    const aLikely = a.querySelector('input[type=checkbox]').checked, bLikely = b.querySelector('input[type=checkbox]').checked;
+    if(aLikely!==bLikely) return aLikely ? -1 : 1;
+    const aGroup = OPP_POSITION_GROUP[a.querySelector('select.opp-pos-select').value] ?? 99;
+    const bGroup = OPP_POSITION_GROUP[b.querySelector('select.opp-pos-select').value] ?? 99;
+    return aGroup-bGroup;
+  });
+  rows.forEach(row=>tbody.appendChild(row));
+}
 
 function oppRowHtml(p){
   p = p || {};
   const posOptions = OPP_POSITIONS.map(pos=>'<option value="'+pos+'"'+(p.position===pos?' selected':'')+'>'+pos+'</option>').join('');
   const num = v => (v===undefined||v===null) ? '' : v;
   return '<tr>'
-    + '<td style="text-align:center"><input type="checkbox"'+(p.likely_selection?' checked':'')+'></td>'
+    + '<td style="text-align:center"><input type="checkbox" onchange="sortOppRows()"'+(p.likely_selection?' checked':'')+'></td>'
     + '<td><input type="text" value="'+(p.name||'').replace(/"/g,'&quot;')+'" placeholder="B.Surname"></td>'
-    + '<td><select class="opp-pos-select">'+posOptions+'</select></td>'
+    + '<td><select class="opp-pos-select" onchange="sortOppRows()">'+posOptions+'</select></td>'
     + '<td><input type="text" value="'+(p.photo_url||'').replace(/"/g,'&quot;')+'" placeholder="https://..."></td>'
     + '<td><input type="number" step="1" value="'+num(p.height_cm)+'"></td>'
     + '<td><input type="number" step="1" value="'+num(p.weight_kg)+'"></td>'
@@ -435,6 +449,7 @@ async function loadOppositionTeam(){
   try{
     const players = await fetch('/api/admin/opposition/'+encodeURIComponent(team),{headers:{'x-admin-token':token}}).then(r=>r.json());
     tbody.innerHTML = (players||[]).map(oppRowHtml).join('');
+    sortOppRows();
   }catch(e){
     tbody.innerHTML='';
     msg.textContent='Could not load this team — try again.';
