@@ -93,6 +93,8 @@ select option{background:#1c2333}
 .kpi-table td input,.kpi-table td select{font-size:12px;padding:6px 8px}
 .kpi-table td input[type=number]{width:70px}
 .kpi-table td input[type=text]{min-width:110px}
+.kpi-table td select.opp-pos-select{min-width:108px}
+.kpi-table td select.opp-foot-select{min-width:80px}
 </style>
 </head>
 <body>
@@ -396,11 +398,11 @@ function oppRowHtml(p){
   return '<tr>'
     + '<td style="text-align:center"><input type="checkbox"'+(p.likely_selection?' checked':'')+'></td>'
     + '<td><input type="text" value="'+(p.name||'').replace(/"/g,'&quot;')+'" placeholder="B.Surname"></td>'
-    + '<td><select>'+posOptions+'</select></td>'
+    + '<td><select class="opp-pos-select">'+posOptions+'</select></td>'
     + '<td><input type="text" value="'+(p.photo_url||'').replace(/"/g,'&quot;')+'" placeholder="https://..."></td>'
     + '<td><input type="number" step="1" value="'+num(p.height_cm)+'"></td>'
     + '<td><input type="number" step="1" value="'+num(p.weight_kg)+'"></td>'
-    + '<td><select><option value=""'+(!p.foot?' selected':'')+'>—</option><option value="Right"'+(p.foot==='Right'?' selected':'')+'>Right</option><option value="Left"'+(p.foot==='Left'?' selected':'')+'>Left</option></select></td>'
+    + '<td><select class="opp-foot-select"><option value=""'+(!p.foot?' selected':'')+'>—</option><option value="Right"'+(p.foot==='Right'?' selected':'')+'>Right</option><option value="Left"'+(p.foot==='Left'?' selected':'')+'>Left</option></select></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.ke_pct)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.m)+'"></td>'
     + '<td><input type="number" step="0.1" value="'+num(p.hbg)+'"></td>'
