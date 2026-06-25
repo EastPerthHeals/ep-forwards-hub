@@ -857,8 +857,9 @@ async function loadOppositionPage(){
     return '<div class="opp-stat'+cls+'"><div class="opp-stat-label">Scores</div><div class="opp-stat-val">'+val+'</div></div>';
   };
   let teamAvgHtml = '';
-  if(team==='West Coast'){
-    const avg = key => { const vals=players.map(p=>p[key]).filter(v=>v!==null&&v!==undefined); return vals.length ? Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10 : null; };
+  const likelyPlayers = players.filter(p=>p.likely_selection);
+  if(likelyPlayers.length){
+    const avg = key => { const vals=likelyPlayers.map(p=>p[key]).filter(v=>v!==null&&v!==undefined); return vals.length ? Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10 : null; };
     let tiles;
     if(line==='Forwards'){
       tiles = scoreStat(avg('g'),avg('b')) + stat('m','M',avg('m')) + stat('i50','I50',avg('i50')) + stat('sa','SA',avg('sa')) + stat('cp','CP',avg('cp')) + stat('c','C',avg('c')) + stat('hr','HR',avg('hr')) + stat('t','T',avg('t'));
@@ -868,7 +869,7 @@ async function loadOppositionPage(){
     } else {
       tiles = stat('ke_pct','KE%',avg('ke_pct'),'%') + stat('m','M',avg('m')) + stat('hbg','HBG',avg('hbg')) + stat('lbg','LBG',avg('lbg')) + stat('cp','CP',avg('cp')) + stat('up','UP',avg('up')) + stat('r50','R50',avg('r50')) + stat('hr','HR',avg('hr'));
     }
-    teamAvgHtml = '<div class="opp-team-avg"><div class="opp-team-avg-title">'+team+' '+line+' &mdash; Team Average ('+players.length+' players)</div><div class="opp-stats">'+tiles+'</div></div>';
+    teamAvgHtml = '<div class="opp-team-avg"><div class="opp-team-avg-title">'+team+' '+line+' &mdash; Likely Selection Average ('+likelyPlayers.length+' players)</div><div class="opp-stats">'+tiles+'</div></div>';
   }
   grid.innerHTML = teamAvgHtml + players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
