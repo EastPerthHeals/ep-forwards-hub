@@ -130,6 +130,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .opp-line-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .opp-grid{display:flex;flex-direction:column;gap:18px}
 .opp-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;gap:18px;flex-wrap:wrap}
+.opp-team-avg{background:var(--bg-card);border:1px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:18px}
+.opp-team-avg-title{font-size:13px;font-weight:700;letter-spacing:0.5px;color:var(--accent-light);margin-bottom:12px;text-transform:uppercase}
 .opp-likely-banner{background:var(--c-green);color:#0c1f16;writing-mode:vertical-rl;text-orientation:mixed;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 4px;flex-shrink:0}
 .opp-photo-col{display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0}
 .opp-photo{width:180px;height:240px;border-radius:12px;object-fit:cover;object-position:top center;background:transparent;flex-shrink:0}
@@ -854,7 +856,21 @@ async function loadOppositionPage(){
     const cls = missing ? '' : oppStatClass('score', g+b, line);
     return '<div class="opp-stat'+cls+'"><div class="opp-stat-label">Scores</div><div class="opp-stat-val">'+val+'</div></div>';
   };
-  grid.innerHTML = players.map(p=>{
+  let teamAvgHtml = '';
+  if(team==='West Coast'){
+    const avg = key => { const vals=players.map(p=>p[key]).filter(v=>v!==null&&v!==undefined); return vals.length ? Math.round((vals.reduce((a,b)=>a+b,0)/vals.length)*10)/10 : null; };
+    let tiles;
+    if(line==='Forwards'){
+      tiles = scoreStat(avg('g'),avg('b')) + stat('m','M',avg('m')) + stat('i50','I50',avg('i50')) + stat('sa','SA',avg('sa')) + stat('cp','CP',avg('cp')) + stat('c','C',avg('c')) + stat('hr','HR',avg('hr')) + stat('t','T',avg('t'));
+    } else if(line==='Midfielders'){
+      const gbg = (avg('hbg')===null||avg('lbg')===null) ? null : Math.round((avg('hbg')+avg('lbg'))*10)/10;
+      tiles = stat('cp','CP',avg('cp')) + stat('up','UP',avg('up')) + stat('c','C',avg('c')) + stat('um','UM',avg('um')) + stat('hr','HR',avg('hr')) + stat('i50','I50',avg('i50')) + stat('lbg','LBG',avg('lbg')) + stat('gbg','GBG',gbg);
+    } else {
+      tiles = stat('ke_pct','KE%',avg('ke_pct'),'%') + stat('m','M',avg('m')) + stat('hbg','HBG',avg('hbg')) + stat('lbg','LBG',avg('lbg')) + stat('cp','CP',avg('cp')) + stat('up','UP',avg('up')) + stat('r50','R50',avg('r50')) + stat('hr','HR',avg('hr'));
+    }
+    teamAvgHtml = '<div class="opp-team-avg"><div class="opp-team-avg-title">'+team+' '+line+' &mdash; Team Average ('+players.length+' players)</div><div class="opp-stats">'+tiles+'</div></div>';
+  }
+  grid.innerHTML = teamAvgHtml + players.map(p=>{
     const initials = (p.name||'').replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase();
     const photo = p.photo_url
       ? '<img class="opp-photo" src="'+p.photo_url+'" alt="'+p.name+'" onerror="this.outerHTML=\'<div class=&quot;opp-photo-placeholder&quot;>'+initials+'</div>\'">'
