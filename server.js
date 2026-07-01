@@ -1,6 +1,47 @@
 const express = require('express');
 const path = require('path');
-const { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote } = require('./db');
+const multer = require('multer');
+const XLSX = require('xlsx');
+const { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData } = require('./db');
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+const WAFL_TEAMS = ['Claremont','East Fremantle','East Perth','Peel Thunder','Perth','South Fremantle','Subiaco','Swan Districts','West Coast Eagles','West Perth'];
+
+function parseLeagueExcel(buffer) {
+  const wb = XLSX.read(buffer, { type: 'buffer' });
+  function sheet(name) { return XLSX.utils.sheet_to_json(wb.Sheets[name] || {}, { defval: null }); }
+
+  const overall = sheet('OVERALL_RATING').filter(r => WAFL_TEAMS.includes(r['Team']));
+  const bm = sheet('BM_CALC');
+  const td = sheet('TD_CALC');
+  const con = sheet('CON_CALC');
+  const scor = sheet('SCOR_CALC');
+  const stop = sheet('STOP_CALC');
+
+  const teams = {};
+  for (const r of overall) {
+    teams[r['Team']] = {
+      overall_rating: r['Overall Rating (Rounded)'],
+      overall_avg: r['Overall Avg (1–5)'],
+      bm_rating: r['Ball Movement Rating'],
+      td_rating: r['Team Defence Rating'],
+      con_rating: r['Contest Rating'],
+      scor_rating: r['Scoring Rating'],
+      stop_rating: r['Stoppage Rating'],
+    };
+  }
+  for (const r of bm) { if (teams[r['Team']]) { teams[r['Team']].bm_profile = r['BM_Profile']; } }
+  for (const r of td) { if (teams[r['Team']]) { teams[r['Team']].td_profile = r['TD_Profile']; } }
+  for (const r of con) {
+    const name = r['TEAM'] || r['Team'];
+    if (teams[name]) { teams[name].con_profile = r['PROFILE'] || r['CON_Profile']; }
+  }
+  for (const r of scor) { if (teams[r['Team']]) { teams[r['Team']].scor_profile = r['SCOR_Profile']; } }
+  for (const r of stop) { if (teams[r['Team']]) { teams[r['Team']].stop_profile = r['STOP_Profile']; } }
+
+  return { teams, updated_at: new Date().toISOString() };
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -259,6 +300,20 @@ app.post('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
   const players = (req.body && req.body.players) || [];
   await setOppositionTeam(req.params.team, players);
   res.json({ ok: true });
+}));
+
+// ── LEAGUE ANALYSIS API ──────────────────────────────────────────────────────
+
+app.get('/api/league/data', requireSiteAccess, wrap(async (req, res) => {
+  const data = await getLeagueData();
+  res.json(data || {});
+}));
+
+app.post('/api/admin/league-upload', requireAdmin, upload.single('file'), wrap(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const data = parseLeagueExcel(req.file.buffer);
+  await setLeagueData(data);
+  res.json({ ok: true, teams: Object.keys(data.teams) });
 }));
 
 app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));

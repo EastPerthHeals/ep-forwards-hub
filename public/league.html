@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>League Analysis — East Perth</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-base:#0d1117;--bg-card:#161c26;--bg-card2:#1c2333;
+  --border:rgba(99,131,179,0.18);--border-hover:rgba(99,131,179,0.4);
+  --accent:#4a7fc1;--accent-light:#6b9fd4;--accent-dim:rgba(74,127,193,0.15);
+  --text-primary:#e2e8f0;--text-secondary:#8899b4;--text-muted:rgba(136,153,180,0.55);
+  --c-red:#e07070;--c-orange:#e8a040;--c-green:#4ecb8d;--c-purple:#b07fe8;--c-blue:#4a7fc1;
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0}
+
+/* LOCK */
+.lock-overlay{position:fixed;inset:0;background:var(--bg-base);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.lock-box{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:32px;max-width:340px;width:100%;text-align:center}
+.lock-box img{height:56px;margin-bottom:16px}
+.lock-box h2{font-size:15px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:18px}
+.lock-box input{width:100%;padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-card2);color:var(--text-primary);font-size:14px;font-family:var(--font);margin-bottom:12px}
+.lock-box input:focus{outline:none;border-color:var(--accent)}
+.lock-box button{width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:var(--font)}
+.lock-box button:hover{background:var(--accent-light)}
+.lock-error{color:var(--c-red);font-size:12px;margin-top:10px;min-height:16px}
+
+/* HEADER */
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
+.header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.header-title{font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.header-sub{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-left:8px}
+.header-link{margin-left:auto;font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:1px;text-transform:uppercase;padding:6px 12px;border:1px solid var(--border);border-radius:6px}
+.header-link:hover{color:var(--accent-light);border-color:var(--accent)}
+
+/* NAV */
+.nav{display:flex;gap:2px;padding:0 24px;background:var(--bg-card);border-bottom:1px solid var(--border);overflow-x:auto;position:sticky;top:60px;z-index:99}
+.nav::-webkit-scrollbar{display:none}
+.nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
+.nav-btn:hover{color:var(--text-secondary)}
+.nav-btn.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+
+/* PAGES */
+.page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto;position:relative;z-index:1}
+.page.active{display:block}
+
+/* SECTION LABEL */
+.section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:14px}
+.section-gap{margin-top:28px}
+
+/* OVERALL BANNER */
+.overall-banner{background:var(--accent-dim);border:1px solid rgba(74,127,193,0.3);border-radius:14px;padding:20px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.overall-left{}
+.overall-team{font-size:22px;font-weight:700;letter-spacing:0.5px;margin-bottom:4px}
+.overall-sub{font-size:12px;color:var(--text-muted)}
+.overall-right{text-align:right}
+.overall-stars{font-size:32px;letter-spacing:4px;line-height:1}
+.overall-avg{font-size:12px;color:var(--text-muted);margin-top:4px}
+
+/* PHASE CARDS GRID */
+.phase-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:800px){.phase-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.phase-grid{grid-template-columns:1fr}}
+.phase-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:border-color 0.2s}
+.phase-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.phase-card.r5::before{background:var(--c-purple)}
+.phase-card.r4::before{background:var(--c-green)}
+.phase-card.r3::before{background:var(--c-blue)}
+.phase-card.r2::before{background:var(--c-orange)}
+.phase-card.r1::before{background:var(--c-red)}
+.phase-name{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+.phase-profile{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:10px;line-height:1.3}
+.phase-stars-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.phase-stars{font-size:20px;letter-spacing:2px}
+.phase-stars.r5{color:var(--c-purple)}
+.phase-stars.r4{color:var(--c-green)}
+.phase-stars.r3{color:var(--c-blue)}
+.phase-stars.r2{color:var(--c-orange)}
+.phase-stars.r1{color:var(--c-red)}
+.phase-rank{font-size:11px;color:var(--text-muted);white-space:nowrap}
+.phase-rank .rank-num{font-weight:700;color:var(--text-secondary)}
+
+/* INSIGHTS BOX */
+.insights-box{background:var(--bg-card);border-radius:12px;border:1px solid var(--border);padding:18px 20px;margin-bottom:24px}
+.insights-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
+.insight-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-secondary);line-height:1.5}
+.insight-row:last-child{border-bottom:none}
+.insight-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* TEAM SELECTOR */
+.team-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.team-tile{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.team-tile:hover{border-color:var(--accent);color:var(--text-primary)}
+.team-tile.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+
+/* MATCHUP */
+.matchup-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+@media(max-width:800px){.matchup-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.matchup-grid{grid-template-columns:1fr}}
+.matchup-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;position:relative;overflow:hidden}
+.matchup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.matchup-phase{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+.matchup-vs{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:8px}
+.matchup-side{text-align:center}
+.matchup-team{font-size:10px;color:var(--text-muted);margin-bottom:4px;letter-spacing:0.5px}
+.matchup-rating{font-size:22px;font-weight:700}
+.matchup-rating.r5{color:var(--c-purple)}
+.matchup-rating.r4{color:var(--c-green)}
+.matchup-rating.r3{color:var(--c-blue)}
+.matchup-rating.r2{color:var(--c-orange)}
+.matchup-rating.r1{color:var(--c-red)}
+.matchup-arrow{font-size:18px;color:var(--text-muted);text-align:center}
+.matchup-arrow.ep-win{color:var(--c-green)}
+.matchup-arrow.opp-win{color:var(--c-red)}
+.matchup-arrow.draw{color:var(--text-muted)}
+.matchup-profiles{font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;gap:6px;line-height:1.4}
+.matchup-profiles span{text-align:center;flex:1}
+
+/* COMPETITION TABLE */
+.comp-table-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:24px}
+.comp-table{width:100%;border-collapse:collapse}
+.comp-table th{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);padding:11px 14px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;cursor:pointer;user-select:none}
+.comp-table th:first-child{text-align:left}
+.comp-table th:hover{color:var(--accent-light)}
+.comp-table th.sort-asc::after{content:' ↑'}
+.comp-table th.sort-desc::after{content:' ↓'}
+.comp-table td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;text-align:center}
+.comp-table tr:last-child td{border-bottom:none}
+.comp-table td:first-child{text-align:left;font-weight:600;color:var(--text-primary)}
+.comp-table tr.ep-row td{background:rgba(74,127,193,0.07);color:var(--accent-light)}
+.comp-table tr.ep-row td:first-child{color:var(--accent-light)}
+.rating-badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;font-size:13px;font-weight:700}
+.rating-badge.r5{background:rgba(176,127,232,0.15);color:var(--c-purple)}
+.rating-badge.r4{background:rgba(78,203,141,0.12);color:var(--c-green)}
+.rating-badge.r3{background:rgba(74,127,193,0.12);color:var(--c-blue)}
+.rating-badge.r2{background:rgba(232,160,64,0.12);color:var(--c-orange)}
+.rating-badge.r1{background:rgba(224,112,112,0.12);color:var(--c-red)}
+
+/* LEADERS */
+.leaders-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.leaders-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.leaders-grid{grid-template-columns:1fr}}
+.leader-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.leader-phase{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+.leader-team{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
+.leader-profile{font-size:11px;color:var(--text-secondary);margin-bottom:6px;line-height:1.4}
+.leader-stars{font-size:18px;letter-spacing:2px}
+
+/* NO DATA */
+.no-data{text-align:center;padding:60px 24px;color:var(--text-muted);font-size:13px;line-height:1.8}
+.no-data a{color:var(--accent-light)}
+
+/* UPDATED BADGE */
+.updated-tag{font-size:10px;color:var(--text-muted);letter-spacing:0.5px;margin-left:auto;padding-right:8px}
+</style>
+</head>
+<body>
+
+<div class="lock-overlay" id="lockOverlay">
+  <div class="lock-box">
+    <img src="/logo.png" alt="EP"/>
+    <h2>League Analysis</h2>
+    <input type="password" id="lockInput" placeholder="Enter password" autocomplete="current-password"/>
+    <button onclick="tryUnlock()">Enter</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
+
+<div class="header" style="position:relative;z-index:1">
+  <div class="header-dot"></div>
+  <span class="header-title">East Perth</span>
+  <span class="header-sub">League Analysis</span>
+  <span class="updated-tag" id="updatedTag"></span>
+  <a href="/" class="header-link">← Hub</a>
+</div>
+
+<div class="nav" style="position:relative;z-index:1">
+  <button class="nav-btn active" onclick="showTab('ep')">EP Report</button>
+  <button class="nav-btn" onclick="showTab('scout')">Opponent Scout</button>
+  <button class="nav-btn" onclick="showTab('comp')">Competition</button>
+</div>
+
+<!-- ── EP REPORT ─────────────────────────────────────────────────────────────── -->
+<div class="page active" id="tab-ep">
+  <div id="ep-content"><div class="no-data">Loading…</div></div>
+</div>
+
+<!-- ── OPPONENT SCOUT ─────────────────────────────────────────────────────────── -->
+<div class="page" id="tab-scout">
+  <div class="section-label">Select this week's opponent</div>
+  <div class="team-tiles" id="scout-tiles"></div>
+  <div id="scout-content"><div class="no-data">Select a team above to load their scouting report.</div></div>
+</div>
+
+<!-- ── COMPETITION ─────────────────────────────────────────────────────────────── -->
+<div class="page" id="tab-comp">
+  <div id="comp-content"><div class="no-data">Loading…</div></div>
+</div>
+
+<script>
+let leagueData = null;
+let sortCol = 'overall';
+let sortDir = 'desc';
+
+// ── LOCK ─────────────────────────────────────────────────────────────────────
+const pw = sessionStorage.getItem('ep_pw');
+if (pw) { document.getElementById('lockOverlay').style.display = 'none'; init(); }
+document.getElementById('lockInput').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+
+async function tryUnlock() {
+  const pw = document.getElementById('lockInput').value;
+  const r = await fetch('/api/site-login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ password: pw }) });
+  const d = await r.json();
+  if (d.ok) {
+    sessionStorage.setItem('ep_pw', pw);
+    document.getElementById('lockOverlay').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('lockError').textContent = 'Incorrect password';
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+async function init() {
+  const pw = sessionStorage.getItem('ep_pw');
+  const r = await fetch('/api/league/data', { headers:{ 'x-site-password': pw } });
+  const d = await r.json();
+  if (!d || !d.teams) {
+    document.getElementById('ep-content').innerHTML = '<div class="no-data">No league data uploaded yet.<br>Go to <a href="/admin/">Admin</a> → League Data to upload the Champion Data spreadsheet.</div>';
+    document.getElementById('comp-content').innerHTML = '<div class="no-data">No league data uploaded yet.</div>';
+    return;
+  }
+  leagueData = d;
+  if (d.updated_at) {
+    const dt = new Date(d.updated_at);
+    document.getElementById('updatedTag').textContent = 'Data: R1–' + (dt ? dt.toLocaleDateString('en-AU', { day:'numeric', month:'short' }) : '');
+  }
+  renderEP();
+  renderScoutTiles();
+  renderComp();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function stars(n) {
+  return '★'.repeat(Math.max(0,n)) + '☆'.repeat(Math.max(0, 5-n));
+}
+function rClass(n) {
+  if (n >= 5) return 'r5';
+  if (n >= 4) return 'r4';
+  if (n >= 3) return 'r3';
+  if (n >= 2) return 'r2';
+  return 'r1';
+}
+function rankInComp(phase, val) {
+  const teams = Object.values(leagueData.teams);
+  const sorted = teams.map(t => t[phase]).filter(v => v != null).sort((a,b) => b-a);
+  return sorted.indexOf(val) + 1;
+}
+const PHASES = [
+  { key:'bm', label:'Ball Movement', profileKey:'bm_profile', ratingKey:'bm_rating' },
+  { key:'td', label:'Team Defence',  profileKey:'td_profile', ratingKey:'td_rating' },
+  { key:'con', label:'Contest',      profileKey:'con_profile', ratingKey:'con_rating' },
+  { key:'scor', label:'Scoring',     profileKey:'scor_profile', ratingKey:'scor_rating' },
+  { key:'stop', label:'Stoppage',    profileKey:'stop_profile', ratingKey:'stop_rating' },
+];
+
+// ── EP REPORT ─────────────────────────────────────────────────────────────────
+function renderEP() {
+  const ep = leagueData.teams['East Perth'];
+  if (!ep) { document.getElementById('ep-content').innerHTML = '<div class="no-data">East Perth not found in data.</div>'; return; }
+
+  const overallR = ep.overall_rating || 0;
+  const overallAvg = ep.overall_avg || 0;
+
+  let cards = '';
+  for (const p of PHASES) {
+    const r = ep[p.ratingKey] || 0;
+    const profile = ep[p.profileKey] || '—';
+    const rank = rankInComp(p.ratingKey, r);
+    const suffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+    cards += `
+      <div class="phase-card ${rClass(r)}">
+        <div class="phase-name">${p.label}</div>
+        <div class="phase-profile">${profile}</div>
+        <div class="phase-stars-row">
+          <div class="phase-stars ${rClass(r)}">${stars(r)}</div>
+          <div class="phase-rank"><span class="rank-num">${rank}${suffix}</span> in comp</div>
+        </div>
+      </div>`;
+  }
+
+  const strengths = PHASES.filter(p => (ep[p.ratingKey]||0) >= 4).map(p => p.label);
+  const weaknesses = PHASES.filter(p => (ep[p.ratingKey]||0) <= 2).map(p => p.label);
+
+  let insights = '';
+  if (strengths.length) insights += `<div class="insight-row"><span class="insight-icon">💪</span><span><strong>Strengths:</strong> ${strengths.join(' & ')} — areas where EP are performing above average in the competition.</span></div>`;
+  if (weaknesses.length) insights += `<div class="insight-row"><span class="insight-icon">⚠️</span><span><strong>Areas to improve:</strong> ${weaknesses.join(' & ')} — rated 2★ or below, below the competition midpoint.</span></div>`;
+
+  const avgTeams = Object.values(leagueData.teams);
+  const compAvg = (avgTeams.reduce((s,t) => s+(t.overall_avg||0), 0) / avgTeams.length).toFixed(1);
+  insights += `<div class="insight-row"><span class="insight-icon">📊</span><span>EP overall average: <strong>${overallAvg.toFixed ? overallAvg.toFixed(1) : overallAvg}</strong> — competition average: <strong>${compAvg}</strong></span></div>`;
+
+  document.getElementById('ep-content').innerHTML = `
+    <div class="overall-banner">
+      <div class="overall-left">
+        <div class="overall-team">East Perth FC</div>
+        <div class="overall-sub">Season R1–11 · Overall Rating</div>
+      </div>
+      <div class="overall-right">
+        <div class="overall-stars ${rClass(overallR)}">${stars(overallR)}</div>
+        <div class="overall-avg">${overallAvg.toFixed ? overallAvg.toFixed(1) : overallAvg} / 5.0 average</div>
+      </div>
+    </div>
+    <div class="section-label">Game Phase Breakdown</div>
+    <div class="phase-grid">${cards}</div>
+    <div class="section-label section-gap">Key Takeaways</div>
+    <div class="insights-box">
+      <div class="insights-title">Season Analysis</div>
+      ${insights}
+    </div>`;
+}
+
+// ── OPPONENT SCOUT ────────────────────────────────────────────────────────────
+function renderScoutTiles() {
+  const teams = Object.keys(leagueData.teams).filter(t => t !== 'East Perth').sort();
+  document.getElementById('scout-tiles').innerHTML = teams.map(t =>
+    `<button class="team-tile" onclick="selectOpponent('${t}')">${t}</button>`
+  ).join('');
+}
+
+function selectOpponent(name) {
+  document.querySelectorAll('.team-tile').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.team-tile[onclick="selectOpponent('${name}')"]`)?.classList.add('active');
+  renderScout(name);
+}
+
+function renderScout(name) {
+  const opp = leagueData.teams[name];
+  const ep = leagueData.teams['East Perth'];
+  if (!opp || !ep) return;
+
+  const oppR = opp.overall_rating || 0;
+  const oppAvg = opp.overall_avg || 0;
+
+  let cards = '';
+  const watchOuts = [], opportunities = [], evenMatches = [];
+
+  for (const p of PHASES) {
+    const epR = ep[p.ratingKey] || 0;
+    const oppR2 = opp[p.ratingKey] || 0;
+    const diff = oppR2 - epR;
+    const arrowClass = diff >= 2 ? 'opp-win' : diff <= -2 ? 'ep-win' : 'draw';
+    const arrow = diff >= 2 ? '▲' : diff <= -2 ? '▼' : '=';
+
+    if (diff >= 2) watchOuts.push({ phase: p.label, epR, oppR: oppR2, oppProfile: opp[p.profileKey] });
+    else if (diff <= -2) opportunities.push({ phase: p.label, epR, oppR: oppR2 });
+    else evenMatches.push({ phase: p.label });
+
+    cards += `
+      <div class="matchup-card ${rClass(oppR2)}">
+        <div class="matchup-phase" style="border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:8px;margin-bottom:10px">${p.label}</div>
+        <div class="matchup-vs">
+          <div class="matchup-side">
+            <div class="matchup-team">EP</div>
+            <div class="matchup-rating ${rClass(epR)}">${epR}★</div>
+          </div>
+          <div class="matchup-arrow ${arrowClass}">${arrow}</div>
+          <div class="matchup-side">
+            <div class="matchup-team">${name.split(' ')[0]}</div>
+            <div class="matchup-rating ${rClass(oppR2)}">${oppR2}★</div>
+          </div>
+        </div>
+        <div class="matchup-profiles">
+          <span>${ep[p.profileKey] || '—'}</span>
+          <span>${opp[p.profileKey] || '—'}</span>
+        </div>
+      </div>`;
+  }
+
+  let insights = '';
+  for (const w of watchOuts) {
+    insights += `<div class="insight-row"><span class="insight-icon">🔴</span><span><strong>Watch out — ${w.phase}:</strong> ${name} are ${w.oppR}★ (${opp[PHASES.find(p=>p.label===w.phase)?.profileKey]||''}) vs EP's ${w.epR}★. Clear mismatch in their favour.</span></div>`;
+  }
+  for (const o of opportunities) {
+    insights += `<div class="insight-row"><span class="insight-icon">🟢</span><span><strong>Opportunity — ${o.phase}:</strong> EP are ${o.epR}★ vs ${name}'s ${o.oppR}★. Look to exploit this phase.</span></div>`;
+  }
+  for (const e of evenMatches) {
+    insights += `<div class="insight-row"><span class="insight-icon">⚪</span><span><strong>${e.phase}:</strong> Evenly matched — outcome will depend on execution.</span></div>`;
+  }
+
+  document.getElementById('scout-content').innerHTML = `
+    <div class="overall-banner">
+      <div class="overall-left">
+        <div class="overall-team">${name}</div>
+        <div class="overall-sub">Season R1–11 · Scouting Report</div>
+      </div>
+      <div class="overall-right">
+        <div class="overall-stars ${rClass(oppR)}">${stars(oppR)}</div>
+        <div class="overall-avg">${oppAvg.toFixed ? oppAvg.toFixed(1) : oppAvg} / 5.0 average</div>
+      </div>
+    </div>
+    <div class="section-label">Phase Matchup — EP vs ${name}</div>
+    <div class="matchup-grid">${cards}</div>
+    <div class="section-label section-gap">Coaching Insights</div>
+    <div class="insights-box">
+      <div class="insights-title">Key Matchups vs ${name}</div>
+      ${insights || '<div class="insight-row"><span class="insight-icon">⚪</span><span>No major mismatches identified — all phases within 1 star of each other.</span></div>'}
+    </div>`;
+}
+
+// ── COMPETITION ───────────────────────────────────────────────────────────────
+function renderComp() {
+  const teams = Object.entries(leagueData.teams);
+  teams.sort((a,b) => (b[1].overall_avg||0) - (a[1].overall_avg||0));
+
+  // Leaders
+  let leadersHtml = '<div class="leaders-grid">';
+  const phaseLabels = { bm:'Ball Movement', td:'Team Defence', con:'Contest', scor:'Scoring', stop:'Stoppage' };
+  for (const [phaseKey, phaseLabel] of Object.entries(phaseLabels)) {
+    const ratingKey = phaseKey + '_rating';
+    const profileKey = phaseKey + '_profile';
+    const best = teams.reduce((best, [name, t]) => {
+      return (t[ratingKey]||0) > (best[1][ratingKey]||0) ? [name, t] : best;
+    }, teams[0]);
+    const r = best[1][ratingKey] || 0;
+    leadersHtml += `
+      <div class="leader-card">
+        <div class="leader-phase">${phaseLabel}</div>
+        <div class="leader-team">${best[0]}</div>
+        <div class="leader-profile">${best[1][profileKey] || ''}</div>
+        <div class="leader-stars ${rClass(r)}">${stars(r)}</div>
+      </div>`;
+  }
+  leadersHtml += '</div>';
+
+  // Table
+  let rows = '';
+  teams.forEach(([name, t], i) => {
+    const isEP = name === 'East Perth';
+    rows += `<tr class="${isEP ? 'ep-row' : ''}">
+      <td>${i+1}. ${name}${isEP ? ' ←' : ''}</td>
+      <td><span class="rating-badge ${rClass(t.bm_rating||0)}">${t.bm_rating||'—'}</span></td>
+      <td><span class="rating-badge ${rClass(t.td_rating||0)}">${t.td_rating||'—'}</span></td>
+      <td><span class="rating-badge ${rClass(t.con_rating||0)}">${t.con_rating||'—'}</span></td>
+      <td><span class="rating-badge ${rClass(t.scor_rating||0)}">${t.scor_rating||'—'}</span></td>
+      <td><span class="rating-badge ${rClass(t.stop_rating||0)}">${t.stop_rating||'—'}</span></td>
+      <td><span class="rating-badge ${rClass(t.overall_rating||0)}">${(t.overall_avg||0).toFixed(1)}</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('comp-content').innerHTML = `
+    <div class="section-label">Category Leaders — R1–11</div>
+    ${leadersHtml}
+    <div class="section-label section-gap">Full Competition Standings</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Sorted by overall average. Ratings 1–5 per game phase.</div>
+    <div class="comp-table-wrap">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Team</th>
+            <th>BM</th>
+            <th>TD</th>
+            <th>CON</th>
+            <th>SCOR</th>
+            <th>STOP</th>
+            <th>Avg</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted);margin-top:6px">
+      <span>Ratings: </span>
+      <span style="color:var(--c-purple)">★★★★★ Elite (5)</span>
+      <span style="color:var(--c-green)">★★★★ Strong (4)</span>
+      <span style="color:var(--c-blue)">★★★ Average (3)</span>
+      <span style="color:var(--c-orange)">★★ Below avg (2)</span>
+      <span style="color:var(--c-red)">★ Weak (1)</span>
+    </div>`;
+}
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+</script>
+</body>
+</html>

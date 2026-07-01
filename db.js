@@ -217,4 +217,21 @@ async function deleteRoundNote(id) {
   await database.collection('round_notes').deleteOne({ _id: new ObjectId(id) });
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote };
+// ── LEAGUE ANALYSIS DATA ─────────────────────────────────────────────────────
+
+async function getLeagueData() {
+  const database = await connect();
+  const doc = await database.collection('league').findOne({ _id: 'data' });
+  return doc ? doc.data : null;
+}
+
+async function setLeagueData(data) {
+  const database = await connect();
+  await database.collection('league').updateOne(
+    { _id: 'data' },
+    { $set: { data, updated_at: new Date() } },
+    { upsert: true }
+  );
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData };
