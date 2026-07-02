@@ -238,6 +238,33 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .leader-team{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
 .leader-profile{font-size:11px;color:var(--text-secondary);margin-bottom:6px;line-height:1.4}
 .leader-stars{font-size:18px;letter-spacing:2px}
+.phase-desc{font-size:11px;color:var(--text-muted);line-height:1.45;margin-bottom:10px;font-style:italic}
+.phase-ep-focus{margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(232,160,64,0.07);border:1px solid rgba(232,160,64,0.22);font-size:11px;color:var(--c-orange);line-height:1.5}
+.phase-ep-focus-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px;opacity:0.8}
+.matchup-desc{font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.05);font-style:italic}
+.matchup-card.threat{border-color:rgba(224,112,112,0.3)}
+.matchup-card.threat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c-red);border-radius:14px 14px 0 0}
+.matchup-card.oppty{border-color:rgba(78,203,141,0.3)}
+.matchup-card.oppty::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--c-green);border-radius:14px 14px 0 0}
+.phase-pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
+.phase-pill.danger{background:rgba(224,112,112,0.15);color:var(--c-red)}
+.phase-pill.oppty{background:rgba(78,203,141,0.12);color:var(--c-green)}
+.ep-rank-banner{background:var(--accent-dim2);border:1px solid rgba(74,127,193,0.2);border-radius:12px;padding:14px 18px;margin-bottom:24px}
+.ep-rank-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
+.ep-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:600px){.ep-rank-grid{grid-template-columns:repeat(3,1fr)}}
+.ep-rank-item{text-align:center;background:var(--bg-card2);border-radius:8px;padding:10px 6px}
+.ep-rank-phase{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
+.ep-rank-val{font-size:20px;font-weight:700;color:var(--accent-light)}
+.ep-rank-pos{font-size:11px;color:var(--text-muted);margin-top:2px}
+.benchmark-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+@media(max-width:700px){.benchmark-grid{grid-template-columns:1fr}}
+.benchmark-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;border-top:3px solid var(--c-purple)}
+.benchmark-rank{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--c-purple);margin-bottom:6px}
+.benchmark-team{font-size:15px;font-weight:700;margin-bottom:10px;color:var(--text-primary)}
+.benchmark-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.benchmark-row:last-child{border-bottom:none}
+.benchmark-row strong{color:var(--text-primary)}
 </style>
 </head>
 <body>
@@ -705,12 +732,63 @@ const C_PHASES = [
   {key:'scor',label:'Scoring',profileKey:'scor_profile',ratingKey:'scor_rating'},
   {key:'stop',label:'Stoppage',profileKey:'stop_profile',ratingKey:'stop_rating'},
 ];
+
+// Full profile intelligence from Opposition Profiling Coaches Handbook (Warren Parker)
+const C_PROFILE_INFO = {
+  // Ball Movement
+  'Direct Conservative Kickers':{desc:'Kicks direct with lower disposal efficiency. Less chain building, more risk in contested entries.',ep_focus:'Work on building disposal chains rather than kicking direct — reduce turnovers in ball movement.',opp_brief:'Apply pressure on entry points to force errors. Intercept structure is key — their direct ball is vulnerable to intercept defenders.'},
+  'Tempo Controllers':{desc:'Controlled, possession-based style. Steady and reliable, but not overly damaging.',ep_focus:'Evolve toward more damaging ball movement. Challenge: break tempo more often and create quicker transition opportunities.',opp_brief:'Disrupt their tempo by tightening pressure on uncontested marks. Slow their recycling and force them into contested decisions.'},
+  'Rebound Launchers':{desc:'Launch long from defensive 50, seeking contested forward entries. High-risk, high-reward method.',ep_focus:'Complement launching with structured chain options to avoid predictable ball movement.',opp_brief:'Contest their air ball aggressively. Intercept structure in defensive 50 is critical — limit their launch points.'},
+  'Controlled Chain Builders':{desc:'Structured disposal chains, clean execution, sequential link-up play.',ep_focus:'Maintain chain discipline under pressure. Develop ability to execute this method when opponents apply a press.',opp_brief:'Pressure at every link in their chain to force errors. Apply pressure early — don\'t let them settle.'},
+  'Fast Advancing Attackers':{desc:'Rapid ball movement, quick transition, attack at pace. Difficult to set up defence against.',ep_focus:'Use transition speed as a weapon — train to advance faster after winning the ball in defensive 50.',opp_brief:'Match their tempo with a high defensive press. Must transition from attack to defence quickly — no passenger forwards.'},
+  'High Tempo Handballers':{desc:'Rapid handballing, high disposal count, ground-level movement. Creates overloads and congestion.',ep_focus:'Use handballing to create overloads but ensure structure is maintained for chain exits.',opp_brief:'Force them to kick by suffocating handball lanes. Apply pressure on handball receivers — disrupt their flow at ground level.'},
+  // Team Defence
+  'Intercept Defenders':{desc:'Cut off chains before they reach F50 through intercept marks. Punish direct, predictable ball movement.',ep_focus:'Build patient, ground-level entry chains. Avoid predictable long kicks that can be intercepted.',opp_brief:'Must build patient, ground-level entry chains. Avoid long kicks — go short and safe, then hit F50 on the move.'},
+  'Chain Disruptors':{desc:'Disrupt disposal chains at source by applying pressure on receivers. Force errors in ball movement.',ep_focus:'Train clean disposal under pressure — accuracy under pressure is critical against this defensive style.',opp_brief:'Execute quick, precise disposals. Errors will be punished immediately. Ball speed and clean hands are key.'},
+  'Damage Minimisers':{desc:'Protect dangerous space, limit quality shots, hard to break open once structure is set.',ep_focus:'Maintain defensive structure discipline. Patience is a strength — use it to wear down opposition.',opp_brief:'Need patience, method and multiple entries. Don\'t take on their structure with hero shots — work the ball until the gap opens.'},
+  'Territory Absorbers':{desc:'Concede territory slowly but protect the scoreboard. Absorb pressure without giving up scores.',ep_focus:'Focus on efficient scoring when territory is gained — don\'t waste opportunities against structured defences.',opp_brief:'Need volume of entries and sustained pressure. Keep the ball in their half — eventually their structure will break.'},
+  'Chaos Creators':{desc:'Create turnovers and broken play through aggressive pressure. Thrive on opposition mistakes.',ep_focus:'Reduce disposal errors, especially in defensive 50. Composed ball use under pressure is the antidote to chaos.',opp_brief:'Must be composed under pressure. Clean execution is critical — they feast on loose possessions and rushed decisions.'},
+  'System Based Defenders':{desc:'Well-drilled defensive structure, zone-based and positionally disciplined. Hard to penetrate with standard entries.',ep_focus:'Use multi-option entry plans. Develop both marking and ground-ball entry routes to exploit zone gaps.',opp_brief:'Move the ball faster than their structure can adjust. Find the weak spot in the zone and hit it at speed.'},
+  // Contest
+  'Repeat Effort Enforcers':{desc:'Win contests through repeat efforts and relentless conditioning. Outlast opponents at contest.',ep_focus:'Match effort levels in training. Contest endurance and repeat-sprint ability are key development areas.',opp_brief:'Match their intensity with early contest pressure. Don\'t let them build momentum through repeated effort.'},
+  'First Touch Controllers':{desc:'Win first possession at stoppages consistently. Control the ball before others react.',ep_focus:'Improve pre-clearance positioning to beat opponents to first touch.',opp_brief:'Disrupt their ruck timing and positioning. Contest the first tap — if they don\'t get it clean, their system breaks.'},
+  'Second Ball Specialists':{desc:'May not win first touch but dominate clearances and second-chance contests.',ep_focus:'Contest beyond first touch. Training focus: winning the loose ball after first contact.',opp_brief:'Contest beyond first touch. Deny them the second ball — win it or spoil it, don\'t let them recycle.'},
+  'Outside Contest Specialists':{desc:'Position outside the contest and use disposals once ball is cleared. Efficient users of space.',ep_focus:'Develop ability to use space outside contests for quick ball movement.',opp_brief:'Tag their distributors. Limit outside run — contest first then cover their disposal options.'},
+  'Aerial & Ground Ball Controllers':{desc:'Strong in both the air and at ground level. Covers all contest types effectively.',ep_focus:'Develop both aerial and ground-ball skills in forward line — be a two-way contest threat.',opp_brief:'Contest both air ball and at ground level. Don\'t cede either dimension — they\'ll exploit whichever you neglect.'},
+  'Swarm & Chaos Tacklers':{desc:'Create chaos through swarming tackles. Force turnovers through pressure rather than clean ball-winning.',ep_focus:'Protect the ball when swarmed. Training focus: composure in heavy traffic and quick disposal under pressure.',opp_brief:'Stay composed, protect the ball, and find space before disposing. Don\'t rush — their pressure is the weapon.'},
+  'Reactive Contesters':{desc:'Arrive second to the ball. React to opposition movement rather than dictating first touch.',ep_focus:'KEY FOCUS: Improve pre-clearance positioning. Attack first touch more aggressively. Reduce free kicks against in contest.',opp_brief:'Proactive positioning beats reactive teams. Attack the ball first — make them respond to us, not the other way around.'},
+  'Stoppage-to-Score Specialists':{desc:'Win stoppages and convert directly into scoring momentum. Dangerous from any stoppage.',ep_focus:'Build on stoppage wins by connecting to scoreboard — train transition from stoppage clearance to F50 entry.',opp_brief:'Contest heavily at stoppages and block their exit structure. Prevent clean clearances — disrupt their transition.'},
+  // Scoring
+  'High Conversion Finishers':{desc:'Efficient finishers. Make entries count and can score heavily from limited opportunities.',ep_focus:'Protect shot quality — don\'t sacrifice accuracy for volume. Clean mark opportunities inside 50 are the priority.',opp_brief:'Deny deep entries. Limit clean shots — not just volume control. Their conversion rate means every entry matters.'},
+  'Repeat Entry Specialists':{desc:'Lock the ball in the forward half, create contests, force turnovers, recycle entries.',ep_focus:'Train persistence in forward half — maintain pressure to generate repeat entries when first shot misses.',opp_brief:'Must clear ball from defensive 50 effectively. Don\'t concede repeat entries — their persistence will eventually break you.'},
+  'Scoring Assist Architects':{desc:'Structured, connected scoring. Shared play, systematic, multiple touches before goal.',ep_focus:'Develop team scoring habits — multiple assist involvements rather than individual hero efforts.',opp_brief:'Disrupt their chain before it reaches F50. Apply early pressure on ball movement — break their structure at source.'},
+  'Turnover Score Creators':{desc:'Strike fast and efficiently from turnovers. Convert opposition errors into scoreboard impact.',ep_focus:'Develop transition speed from defensive turnover wins — get the ball forward fast before defence resets.',opp_brief:'Protect the ball — limit turnovers in dangerous areas. Their speed of conversion is the threat.'},
+  'Stoppage Scoring Enforcers':{desc:'Score heavily from congested F50 contests. Physicality and ground-level dominance in the forward arc.',ep_focus:'Generate more stoppage scoring opportunities by winning F50 ground contests.',opp_brief:'Defend stoppages in F50 strongly. Contest ground ball inside forward arc. Don\'t allow free possession inside 50.'},
+  'Coast-to-Coast Specialists':{desc:'Score from full-length transitions, especially kick-in chains. Structured exit to goal sequences.',ep_focus:'Develop structured exit plays from kick-ins — build chain from the defensive half as a scoring method.',opp_brief:'Apply pressure on their kick-ins. Disrupt their defensive exit structure — break the chain early to prevent the score.'},
+  'Dirty Ball Specialists':{desc:'Score from chaotic, ground-level contests. Snaps, spills and broken play. Unpredictable.',ep_focus:'Capitalise on broken play in F50 — train snap shooting and contested ground-ball work near goal.',opp_brief:'Control F50 ground ball. Limit opponent ground access inside the forward arc. Spoil and smother at ground level.'},
+  'Efficient Front-Half Scorers':{desc:'High-quality shots, good conversion, keep ball in the forward zone. Clean, high-return operation.',ep_focus:'Build on efficiency — maintain front-half focus and prevent defensive rebounds when shots miss.',opp_brief:'Prevent rebound 50 when defending. Lock the ball in when attacking — don\'t let them transition out cleanly.'},
+  // Stoppage
+  'Ruck Advantage Benefactors':{desc:'Consistent ruck advantage creates clean first possession for midfielders. System operates off clean supply.',ep_focus:'Use ruck dominance to generate territory consistently. Structure plays to capitalise on clean hitout supply.',opp_brief:'Disrupt hitouts and contest shape. Target ruck at boundary stoppages. Contest the second phase after hitout.'},
+  'First Touch Specialists':{desc:'Excel at winning ball at the very start of stoppages regardless of ruck result.',ep_focus:'Develop first-touch positioning and timing — win the ball before the opposition settles.',opp_brief:'Compete harder at tap-out phase. Positioning and anticipation are key — beat them to the first touch.'},
+  'Surge Specialists':{desc:'Turn stoppages into forward movement through follow-up work and connection.',ep_focus:'Link stoppage wins into forward surges — develop the connection between ruck tap and midfielder surge.',opp_brief:'Win first possession or immediately pressure their clearance. Stop the surge before it builds momentum.'},
+  'Centre Bounce Dominators':{desc:'Dominate centre bounces in all aspects — hitout, first possession, clearance and scoring.',ep_focus:'Structure centre bounces to maximise hitout advantage and clearance wins.',opp_brief:'Structure must account for their CB strength. Apply forward pressure immediately after CB to prevent momentum.'},
+  'Throw In Dominators':{desc:'Thrive at boundary stoppages. Strong ruck craft and structure at throw-ins.',ep_focus:'Improve throw-in structure — positioning of mids and forwards at boundary stoppages.',opp_brief:'Prepare specific structure for throw-ins. Challenge their advantage at the boundary.'},
+  'Congestion Controllers':{desc:'Win contests in tight, repeated congestion. Repeat-effort mechanics in heavy traffic.',ep_focus:'Develop congestion clearance skills — work in tight space when ball is locked in.',opp_brief:'Need clearance specialists who operate in heavy traffic. Match their repeat effort in congestion.'},
+  'Stoppage Score Specialists':{desc:'Convert stoppage wins directly into scoring. Paired with strong exit structure.',ep_focus:'Link stoppage wins to forward 50 entries — build the structure from clearance to score.',opp_brief:'Immediate defensive structure after stoppages. Prevent clean exits — disrupt their transition from stoppage.'},
+  'Pressure Absorbers':{desc:'Absorb opposition stoppage pressure and prevent clean scores against. Strong defensive stoppage structure.',ep_focus:'Build similar defensive stoppage structure — be hard to score against from stoppages.',opp_brief:'Find non-stoppage scoring routes against this team. Their defensive stoppage structure is solid — look elsewhere for entries.'},
+};
+
 function cStars(n){return'★'.repeat(Math.max(0,n))+'☆'.repeat(Math.max(0,5-n));}
 function cRc(n){return n>=5?'r5':n>=4?'r4':n>=3?'r3':n>=2?'r2':'r1';}
 function cRank(ratingKey, val){
   const vals=Object.values(coachesData.teams).map(t=>t[ratingKey]).filter(v=>v!=null).sort((a,b)=>b-a);
   const r=vals.indexOf(val)+1; return r+(r===1?'st':r===2?'nd':r===3?'rd':'th');
 }
+function cRankNum(ratingKey, val){
+  const vals=Object.values(coachesData.teams).map(t=>t[ratingKey]).filter(v=>v!=null).sort((a,b)=>b-a);
+  return vals.indexOf(val)+1;
+}
+function ordinal(n){return n+(n===1?'st':n===2?'nd':n===3?'rd':'th');}
 
 async function loadCoachesDataIfNeeded(){
   if(coachesData){renderAllCoaches();return;}
@@ -733,10 +811,16 @@ function renderCoachesEP(){
   const ep=coachesData.teams['East Perth'];
   if(!ep){document.getElementById('coaches-ep-content').innerHTML='<p class="hint">East Perth not found in data.</p>';return;}
   const or=ep.overall_rating||0, oa=ep.overall_avg||0;
+  // Find weakest phase for focus callout
+  const sorted=[...C_PHASES].sort((a,b)=>(ep[a.ratingKey]||0)-(ep[b.ratingKey]||0));
+  const weakestPhase=sorted[0];
   let cards='';
   for(const p of C_PHASES){
     const r=ep[p.ratingKey]||0, profile=ep[p.profileKey]||'—', rank=cRank(p.ratingKey,r);
-    cards+=`<div class="phase-card ${cRc(r)}"><div class="phase-name">${p.label}</div><div class="phase-profile">${profile}</div><div class="phase-stars-row"><div class="phase-stars ${cRc(r)}">${cStars(r)}</div><div class="phase-rank"><strong>${rank}</strong> in comp</div></div></div>`;
+    const info=C_PROFILE_INFO[profile]||{};
+    const isWeakest=p.key===weakestPhase.key;
+    const focusBlock=info.ep_focus?`<div class="phase-ep-focus"><div class="phase-ep-focus-title">${isWeakest?'Priority Focus':'Coaching Note'}</div>${info.ep_focus}</div>`:'';
+    cards+=`<div class="phase-card ${cRc(r)}"><div class="phase-name">${p.label}</div><div class="phase-profile">${profile}</div>${info.desc?`<div class="phase-desc">${info.desc}</div>`:''}<div class="phase-stars-row"><div class="phase-stars ${cRc(r)}">${cStars(r)}</div><div class="phase-rank"><strong>${rank}</strong> in comp</div></div>${focusBlock}</div>`;
   }
   const strengths=C_PHASES.filter(p=>(ep[p.ratingKey]||0)>=4).map(p=>p.label);
   const weaknesses=C_PHASES.filter(p=>(ep[p.ratingKey]||0)<=2).map(p=>p.label);
@@ -745,13 +829,15 @@ function renderCoachesEP(){
   let insights='';
   if(strengths.length) insights+=`<div class="ci-row"><span class="ci-icon">💪</span><span><strong>Strengths:</strong> ${strengths.join(' & ')} — performing above average in the competition.</span></div>`;
   if(weaknesses.length) insights+=`<div class="ci-row"><span class="ci-icon">⚠️</span><span><strong>Areas to improve:</strong> ${weaknesses.join(' & ')} — rated 2★ or below.</span></div>`;
+  const focusInfo=C_PROFILE_INFO[ep[weakestPhase.profileKey]]||{};
+  if(focusInfo.ep_focus) insights+=`<div class="ci-row"><span class="ci-icon">🎯</span><span><strong>Priority focus — ${weakestPhase.label}:</strong> ${focusInfo.ep_focus}</span></div>`;
   insights+=`<div class="ci-row"><span class="ci-icon">📊</span><span>EP overall average: <strong>${oa.toFixed?oa.toFixed(1):oa}</strong> — competition average: <strong>${compAvg}</strong></span></div>`;
   document.getElementById('coaches-ep-content').innerHTML=`
-    <div class="overall-banner"><div><div class="overall-team">East Perth FC</div><div style="font-size:12px;color:var(--text-muted)">Season R1–12 · Overall Rating</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
+    <div class="overall-banner"><div><div class="overall-team">East Perth FC</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Ratings</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Game Phase Breakdown</div>
     <div class="phase-grid">${cards}</div>
-    <div class="section-label" style="margin-top:24px">Key Takeaways</div>
-    <div class="ci-box"><div class="ci-title">Season Analysis</div>${insights}</div>`;
+    <div class="section-label" style="margin-top:24px">Season Analysis</div>
+    <div class="ci-box"><div class="ci-title">Key Takeaways</div>${insights}</div>`;
 }
 
 function renderCoachesScoutTiles(){
@@ -765,30 +851,65 @@ function selectCoachesOpponent(name){
   const opp=coachesData.teams[name], ep=coachesData.teams['East Perth'];
   if(!opp||!ep) return;
   const or=opp.overall_rating||0, oa=opp.overall_avg||0;
-  let cards='', watchOuts=[], opportunities=[], even=[];
+  let cards='', threats=[], opportunities=[], even=[];
   for(const p of C_PHASES){
     const epR=ep[p.ratingKey]||0, oppR=opp[p.ratingKey]||0, diff=oppR-epR;
+    const oppProfile=opp[p.profileKey]||'—';
+    const info=C_PROFILE_INFO[oppProfile]||{};
+    const isThreat=oppR>=4, isOppty=oppR<=2;
+    const cardClass=isThreat?'matchup-card threat':isOppty?'matchup-card oppty':'matchup-card';
+    const pill=isThreat?'<span class="phase-pill danger">THREAT</span>':isOppty?'<span class="phase-pill oppty">OPPORTUNITY</span>':'';
     const arrow=diff>=2?'▲':diff<=-2?'▼':'=';
     const arrowColor=diff>=2?'var(--c-red)':diff<=-2?'var(--c-green)':'var(--text-muted)';
-    if(diff>=2) watchOuts.push({phase:p.label,epR,oppR,profile:opp[p.profileKey]||''});
-    else if(diff<=-2) opportunities.push({phase:p.label,epR,oppR});
-    else even.push(p.label);
-    cards+=`<div class="matchup-card"><div class="matchup-phase">${p.label}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${name.split(' ')[0]}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${ep[p.profileKey]||'—'}</span><span>${opp[p.profileKey]||'—'}</span></div></div>`;
+    if(diff>=2||isThreat) threats.push({phase:p.label,epR,oppR,profile:oppProfile,brief:info.opp_brief||''});
+    else if(diff<=-2||isOppty) opportunities.push({phase:p.label,epR,oppR,brief:info.opp_brief||''});
+    else even.push({phase:p.label,brief:info.opp_brief||''});
+    const descBlock=info.opp_brief?`<div class="matchup-desc">${info.opp_brief}</div>`:'';
+    cards+=`<div class="${cardClass}"><div class="matchup-phase">${p.label}${pill}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${name.split(' ')[0]}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${ep[p.profileKey]||'—'}</span><span>${oppProfile}</span></div>${descBlock}</div>`;
   }
   let insights='';
-  for(const w of watchOuts) insights+=`<div class="ci-row"><span class="ci-icon">🔴</span><span><strong>Watch out — ${w.phase}:</strong> ${name} are ${w.oppR}★ (${w.profile}) vs EP's ${w.epR}★.</span></div>`;
-  for(const o of opportunities) insights+=`<div class="ci-row"><span class="ci-icon">🟢</span><span><strong>Opportunity — ${o.phase}:</strong> EP are ${o.epR}★ vs ${name}'s ${o.oppR}★. Look to exploit.</span></div>`;
-  for(const e of even) insights+=`<div class="ci-row"><span class="ci-icon">⚪</span><span><strong>${e}:</strong> Evenly matched — outcome will depend on execution.</span></div>`;
+  // Deduplicate — threats array may overlap with diff-based, use oppR threshold for display
+  const shownThreats=[...new Map(threats.map(t=>[t.phase,t])).values()];
+  const shownOppty=[...new Map(opportunities.map(o=>[o.phase,o])).values()].filter(o=>!shownThreats.find(t=>t.phase===o.phase));
+  const shownEven=even.filter(e=>!shownThreats.find(t=>t.phase===e.phase)&&!shownOppty.find(o=>o.phase===e.phase));
+  for(const w of shownThreats) insights+=`<div class="ci-row"><span class="ci-icon">🔴</span><span><strong>Threat — ${w.phase}:</strong> ${name} are rated ${w.oppR}★ as <em>${w.profile}</em>${w.brief?'. '+w.brief:''}</span></div>`;
+  for(const o of shownOppty) insights+=`<div class="ci-row"><span class="ci-icon">🟢</span><span><strong>Opportunity — ${o.phase}:</strong> ${name} are rated ${o.oppR}★.${o.brief?' '+o.brief:' EP rated '+o.epR+'★ — look to exploit.'}</span></div>`;
+  for(const e of shownEven) insights+=`<div class="ci-row"><span class="ci-icon">⚪</span><span><strong>${e.phase}:</strong> Evenly matched — outcome will depend on execution.${e.brief?' '+e.brief:''}</span></div>`;
   document.getElementById('coaches-scout-content').innerHTML=`
-    <div class="overall-banner"><div><div class="overall-team">${name}</div><div style="font-size:12px;color:var(--text-muted)">Season R1–12 · Scouting Report</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
+    <div class="overall-banner"><div><div class="overall-team">${name}</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Scouting Report</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Phase Matchup — EP vs ${name}</div>
     <div class="matchup-grid">${cards}</div>
     <div class="section-label" style="margin-top:24px">Coaching Insights</div>
-    <div class="ci-box"><div class="ci-title">Key Matchups vs ${name}</div>${insights||'<div class="ci-row"><span class="ci-icon">⚪</span><span>No major mismatches — all phases within 1 star of each other.</span></div>'}</div>`;
+    <div class="ci-box"><div class="ci-title">Game Plan vs ${name}</div>${insights||'<div class="ci-row"><span class="ci-icon">⚪</span><span>No major mismatches detected — execution and effort will determine the outcome.</span></div>'}</div>`;
 }
 
 function renderCoachesComp(){
   const teams=Object.entries(coachesData.teams).sort((a,b)=>(b[1].overall_avg||0)-(a[1].overall_avg||0));
+  const ep=coachesData.teams['East Perth'];
+  // EP Phase Rankings banner
+  let epRankItems='';
+  for(const p of C_PHASES){
+    const r=ep?ep[p.ratingKey]||0:0;
+    const rank=ep?cRankNum(p.ratingKey,r):'-';
+    epRankItems+=`<div class="ep-rank-item"><div class="ep-rank-phase">${p.label.split(' ')[0]}</div><div class="ep-rank-val">${r}★</div><div class="ep-rank-pos">${ordinal(rank)} of ${teams.length}</div></div>`;
+  }
+  const epRankBanner=`<div class="ep-rank-banner"><div class="ep-rank-title">East Perth — Phase Rankings</div><div class="ep-rank-grid">${epRankItems}</div></div>`;
+
+  // Top 3 Benchmark
+  const top3=teams.slice(0,3);
+  let benchmarkCards='';
+  for(let i=0;i<top3.length;i++){
+    const [tname,t]=top3[i];
+    const suffix=i===0?'st':i===1?'nd':'rd';
+    let rows='';
+    for(const p of C_PHASES){
+      const r=t[p.ratingKey]||0, prof=t[p.profileKey]||'—';
+      rows+=`<div class="benchmark-row"><strong>${p.label.split(' ')[0]}</strong><span style="color:${r>=4?'var(--c-green)':r<=2?'var(--c-red)':'var(--accent)'}">${cStars(r)}</span><span style="font-size:11px;color:var(--text-muted);text-align:right;flex:1;margin-left:6px">${prof}</span></div>`;
+    }
+    benchmarkCards+=`<div class="benchmark-card"><div class="benchmark-rank">${i+1}${suffix} Overall</div><div class="benchmark-team">${tname}</div><div class="benchmark-phases">${rows}</div></div>`;
+  }
+
+  // Category leaders
   const phaseMap={bm:'Ball Movement',td:'Team Defence',con:'Contest',scor:'Scoring',stop:'Stoppage'};
   let leaders='<div class="leaders-grid">';
   for(const [pk,pl] of Object.entries(phaseMap)){
@@ -798,16 +919,22 @@ function renderCoachesComp(){
     leaders+=`<div class="leader-card"><div class="leader-phase">${pl}</div><div class="leader-team">${best[0]}</div><div class="leader-profile">${best[1][prk]||''}</div><div class="leader-stars ${cRc(r)}">${cStars(r)}</div></div>`;
   }
   leaders+='</div>';
+
+  // Full standings table
   let rows='';
   teams.forEach(([name,t],i)=>{
     const isEP=name==='East Perth';
     rows+=`<tr class="${isEP?'ep-row':''}"><td>${i+1}. ${name}${isEP?' ←':''}</td><td><span class="rating-badge ${cRc(t.bm_rating||0)}">${t.bm_rating||'—'}</span></td><td><span class="rating-badge ${cRc(t.td_rating||0)}">${t.td_rating||'—'}</span></td><td><span class="rating-badge ${cRc(t.con_rating||0)}">${t.con_rating||'—'}</span></td><td><span class="rating-badge ${cRc(t.scor_rating||0)}">${t.scor_rating||'—'}</span></td><td><span class="rating-badge ${cRc(t.stop_rating||0)}">${t.stop_rating||'—'}</span></td><td><span class="rating-badge ${cRc(t.overall_rating||0)}">${(t.overall_avg||0).toFixed(1)}</span></td></tr>`;
   });
+
   document.getElementById('coaches-comp-content').innerHTML=`
-    <div class="section-label">Category Leaders</div>${leaders}
+    ${epRankBanner}
+    <div class="section-label">Top 3 Teams — Benchmark</div>
+    <div class="benchmark-grid">${benchmarkCards}</div>
+    <div class="section-label" style="margin-top:24px">Category Leaders</div>${leaders}
     <div class="section-label" style="margin-top:24px">Full Competition Standings</div>
     <div class="comp-table-wrap"><table class="comp-table"><thead><tr><th style="text-align:left">Team</th><th>BM</th><th>TD</th><th>CON</th><th>SCOR</th><th>STOP</th><th>Avg</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted)"><span style="color:var(--c-purple)">★★★★★ Elite</span><span style="color:var(--c-green)">★★★★ Strong</span><span style="color:var(--accent)">★★★ Average</span><span style="color:var(--c-orange)">★★ Below avg</span><span style="color:var(--c-red)">★ Weak</span></div>`;
+    <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--text-muted);margin-top:12px"><span style="color:var(--c-purple)">★★★★★ Elite</span><span style="color:var(--c-green)">★★★★ Strong</span><span style="color:var(--accent)">★★★ Average</span><span style="color:var(--c-orange)">★★ Below avg</span><span style="color:var(--c-red)">★ Weak</span></div>`;
 }
 
 let allRounds=[];
