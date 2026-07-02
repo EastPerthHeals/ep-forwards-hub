@@ -808,7 +808,7 @@ const C_PHASE_STATS = {
     {key:'intercept_poss',label:'Int Poss',suffix:'',hb:true},
     {key:'rebound_rate',label:'Reb Rate',suffix:'%',hb:true},
     {key:'i50_against',label:'I50 Agst',suffix:'',hb:false},
-    {key:'pts_per_i50_against',label:'Pts/I50 Agst',suffix:'',hb:false},
+    {key:'pts_per_i50_against',label:'Pts/I50 Agst',suffix:'',hb:false,dp:2},
   ],
   con:[
     {key:'hard_ball_gets',label:'Hard Ball Gets',suffix:'',hb:true},
@@ -819,15 +819,15 @@ const C_PHASE_STATS = {
   ],
   scor:[
     {key:'accuracy',label:'Accuracy',suffix:'%',hb:true},
-    {key:'pts_per_i50',label:'Pts/I50',suffix:'',hb:true},
-    {key:'f50_marks_per_i50',label:'F50 Mk/I50',suffix:'',hb:true},
+    {key:'pts_per_i50',label:'Pts/I50',suffix:'',hb:true,dp:2},
+    {key:'f50_marks_per_i50',label:'F50 Mk/I50',suffix:'',hb:true,dp:3},
     {key:'stop_scoring',label:'Stop Pts',suffix:'',hb:true},
     {key:'to_scoring',label:'TO Pts',suffix:'',hb:true},
   ],
   stop:[
     {key:'hitout_adv',label:'HO Adv',suffix:'',hb:true},
-    {key:'fp_per_stop',label:'1st/Stop',suffix:'',hb:true},
-    {key:'clear_per_stop',label:'Clear/Stop',suffix:'',hb:true},
+    {key:'fp_per_stop',label:'1st/Stop',suffix:'',hb:true,dp:2},
+    {key:'clear_per_stop',label:'Clear/Stop',suffix:'',hb:true,dp:2},
     {key:'stop_scoring',label:'Stop Pts',suffix:'',hb:true},
     {key:'stop_against',label:'Stop Agst',suffix:'',hb:false},
   ],
@@ -838,7 +838,11 @@ function cStatColor(statsKey, statKey, val, hb) {
   const allVals=Object.values(coachesData.teams).map(t=>t[statsKey]?.[statKey]).filter(v=>v!=null);
   if(!allVals.length) return 'var(--text-secondary)';
   const avg=allVals.reduce((a,b)=>a+b,0)/allVals.length;
-  return (hb ? val>avg : val<avg) ? 'var(--c-green)' : 'var(--c-red)';
+  const sorted=hb?[...allVals].sort((a,b)=>b-a):[...allVals].sort((a,b)=>a-b);
+  const top2threshold=sorted[Math.min(1,sorted.length-1)];
+  if(hb ? val>=top2threshold : val<=top2threshold) return 'var(--c-purple)';
+  if(hb ? val>avg : val<avg) return 'var(--c-green)';
+  return 'var(--c-red)';
 }
 
 function cPhaseStatGrid(phaseKey, statsObj, compact) {
@@ -848,7 +852,7 @@ function cPhaseStatGrid(phaseKey, statsObj, compact) {
   const items=defs.map(s=>{
     const v=statsObj[s.key]; if(v==null) return '';
     const color=cStatColor(sk,s.key,v,s.hb);
-    const disp=Number.isInteger(v)?v:(+v).toFixed(1);
+    const disp=Number.isInteger(v)&&!s.dp?v:(+v).toFixed(s.dp||1);
     return `<div class="pstat"><div class="pstat-label">${s.label}</div><div class="pstat-val" style="color:${color}">${disp}${s.suffix}</div></div>`;
   }).filter(Boolean);
   return items.length?`<div class="pstat-grid${compact?' compact':''}">${items.join('')}</div>`:'';
