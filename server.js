@@ -85,6 +85,13 @@ app.post('/api/site-login', wrap(async (req, res) => {
   res.json({ ok: supplied === current });
 }));
 
+// Coaches tab password check (uses admin password)
+app.post('/api/coaches-login', wrap(async (req, res) => {
+  const supplied = (req.body && req.body.password) || '';
+  const current = await getAdminPassword();
+  res.json({ ok: supplied === current });
+}));
+
 // Lets the Game Day lock screen check a password without needing any other data
 app.post('/api/gameday-login', wrap(async (req, res) => {
   const supplied = (req.body && req.body.password) || '';

@@ -173,7 +173,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <div class="header-dot"></div>
   <span class="header-title">East Perth</span>
   <span class="header-sub">League Analysis</span>
-  <span class="updated-tag" id="updatedTag"></span>
   <a href="/" class="header-link">← Hub</a>
 </div>
 
@@ -234,10 +233,6 @@ async function init() {
     return;
   }
   leagueData = d;
-  if (d.updated_at) {
-    const dt = new Date(d.updated_at);
-    document.getElementById('updatedTag').textContent = 'Data: R1–' + (dt ? dt.toLocaleDateString('en-AU', { day:'numeric', month:'short' }) : '');
-  }
   renderEP();
   renderScoutTiles();
   renderComp();
