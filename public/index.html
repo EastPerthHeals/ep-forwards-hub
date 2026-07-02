@@ -958,7 +958,7 @@ function renderCoachesComp(){
   for(const p of C_PHASES){
     const r=ep?ep[p.ratingKey]||0:0;
     const rank=ep?cRankNum(p.ratingKey,r):'-';
-    epRankItems+=`<div class="ep-rank-item"><div class="ep-rank-phase">${p.label.split(' ')[0]}</div><div class="ep-rank-val">${r}★</div><div class="ep-rank-pos">${ordinal(rank)} of ${teams.length}</div></div>`;
+    epRankItems+=`<div class="ep-rank-item"><div class="ep-rank-phase">${p.label}</div><div class="ep-rank-val">${r}★</div></div>`;
   }
   const epRankBanner=`<div class="ep-rank-banner"><div class="ep-rank-title">East Perth — Phase Rankings</div><div class="ep-rank-grid">${epRankItems}</div></div>`;
 
@@ -971,7 +971,7 @@ function renderCoachesComp(){
     let rows='';
     for(const p of C_PHASES){
       const r=t[p.ratingKey]||0, prof=t[p.profileKey]||'—';
-      rows+=`<div class="benchmark-row"><strong>${p.label.split(' ')[0]}</strong><span style="color:${r>=4?'var(--c-green)':r<=2?'var(--c-red)':'var(--accent)'}">${cStars(r)}</span><span style="font-size:11px;color:var(--text-muted);text-align:right;flex:1;margin-left:6px">${prof}</span></div>`;
+      rows+=`<div class="benchmark-row"><strong>${p.label}</strong><span style="color:${r>=4?'var(--c-green)':r<=2?'var(--c-red)':'var(--accent)'}">${cStars(r)}</span><span style="font-size:11px;color:var(--text-muted);text-align:right;flex:1;margin-left:6px">${prof}</span></div>`;
     }
     benchmarkCards+=`<div class="benchmark-card"><div class="benchmark-rank">${i+1}${suffix} Overall</div><div class="benchmark-team">${tname}</div><div class="benchmark-phases">${rows}</div></div>`;
   }
