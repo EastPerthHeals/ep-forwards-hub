@@ -18,6 +18,11 @@ function parseLeagueExcel(buffer) {
   const con = sheet('CON_CALC');
   const scor = sheet('SCOR_CALC');
   const stop = sheet('STOP_CALC');
+  const bmRaw = sheet('BM_RAW_DATA');
+  const tdRaw = sheet('TD_RAW_DATA');
+  const conRaw = sheet('CON_RAW_DATA');
+  const scorRaw = sheet('SCOR_RAW_DATA');
+  const stopRaw = sheet('STOP_DATA');
 
   const teams = {};
   for (const r of overall) {
@@ -39,6 +44,59 @@ function parseLeagueExcel(buffer) {
   }
   for (const r of scor) { if (teams[r['Team']]) { teams[r['Team']].scor_profile = r['SCOR_Profile']; } }
   for (const r of stop) { if (teams[r['Team']]) { teams[r['Team']].stop_profile = r['STOP_Profile']; } }
+
+  // Raw stats — explain why each team has its profile
+  for (const r of bmRaw) {
+    if (!teams[r['Team']]) continue;
+    const k = r['Kick'] || 0, hb = r['Handball'] || 0;
+    teams[r['Team']].bm_stats = {
+      disposal_eff: r['Disposal Eff %'],
+      kicking_eff: r['Kicking Eff %'],
+      kick_pct: k + hb > 0 ? Math.round(k / (k + hb) * 100) : null,
+      unc_marks: r['Uncontested Mark'],
+      turnovers: r['Turnover'],
+    };
+  }
+  for (const r of tdRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].td_stats = {
+      intercept_marks: r['intercept Mark'],
+      intercept_poss: r['Intercept Possession'],
+      rebound_rate: r['Rebound 50 Rate %'] != null ? Math.round(r['Rebound 50 Rate %'] * 10) / 10 : null,
+      i50_against: r['Inside 50 Against'],
+      pts_per_i50_against: r['Pts Agst p In50 Agst'] != null ? Math.round(r['Pts Agst p In50 Agst'] * 100) / 100 : null,
+    };
+  }
+  for (const r of conRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].con_stats = {
+      hard_ball_gets: r['Hard Ball Get'],
+      gbg_pre: r['Ground Ball Get Pre-Clearance'],
+      contested_poss: r['Contested Possession'],
+      tackles_pre: r['Tackles Pre Clearance'],
+      fk_against: r['Free Kick Against'],
+    };
+  }
+  for (const r of scorRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].scor_stats = {
+      accuracy: r['Scoring Accuracy %'],
+      pts_per_i50: r['Points per Inside 50'] != null ? Math.round(r['Points per Inside 50'] * 100) / 100 : null,
+      f50_marks_per_i50: r['F50 Marks per Inside 50'] != null ? Math.round(r['F50 Marks per Inside 50'] * 1000) / 1000 : null,
+      stop_scoring: r['Stoppage Scoring Points '],
+      to_scoring: r['Turnover Scoring Points '],
+    };
+  }
+  for (const r of stopRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].stop_stats = {
+      hitout_adv: r['Hitout to Advantage'],
+      fp_per_stop: r['First Possession per Stoppage'] != null ? Math.round(r['First Possession per Stoppage'] * 100) / 100 : null,
+      clear_per_stop: r['Clearance per Stoppage'] != null ? Math.round(r['Clearance per Stoppage'] * 100) / 100 : null,
+      stop_scoring: r['Stoppage Scoring Points '],
+      stop_against: r['Stoppage Scoring Points Against'],
+    };
+  }
 
   return { teams, updated_at: new Date().toISOString() };
 }

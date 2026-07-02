@@ -238,6 +238,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .leader-team{font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:4px}
 .leader-profile{font-size:11px;color:var(--text-secondary);margin-bottom:6px;line-height:1.4}
 .leader-stars{font-size:18px;letter-spacing:2px}
+.pstat-grid{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.06)}
+.pstat{flex:1;min-width:52px;text-align:center;background:var(--bg-card2);border-radius:6px;padding:5px 4px}
+.pstat-label{font-size:8.5px;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;line-height:1.2}
+.pstat-val{font-size:12px;font-weight:700}
+.pstat-grid.compact .pstat{min-width:44px}
 .phase-desc{font-size:11px;color:var(--text-muted);line-height:1.45;margin-bottom:10px;font-style:italic}
 .phase-ep-focus{margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(232,160,64,0.07);border:1px solid rgba(232,160,64,0.22);font-size:11px;color:var(--c-orange);line-height:1.5}
 .phase-ep-focus-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px;opacity:0.8}
@@ -778,6 +783,66 @@ const C_PROFILE_INFO = {
   'Pressure Absorbers':{desc:'Absorb opposition stoppage pressure and prevent clean scores against. Strong defensive stoppage structure.',ep_focus:'Build similar defensive stoppage structure — be hard to score against from stoppages.',opp_brief:'Find non-stoppage scoring routes against this team. Their defensive stoppage structure is solid — look elsewhere for entries.'},
 };
 
+// Phase stat definitions — which raw stats explain each profile, and whether higher = better
+const C_PHASE_STATS = {
+  bm:[
+    {key:'disposal_eff',label:'Disp Eff',suffix:'%',hb:true},
+    {key:'kicking_eff',label:'Kick Eff',suffix:'%',hb:true},
+    {key:'kick_pct',label:'Kick %',suffix:'%',hb:null},
+    {key:'unc_marks',label:'Unc Marks',suffix:'',hb:true},
+    {key:'turnovers',label:'Turnovers',suffix:'',hb:false},
+  ],
+  td:[
+    {key:'intercept_marks',label:'Int Marks',suffix:'',hb:true},
+    {key:'intercept_poss',label:'Int Poss',suffix:'',hb:true},
+    {key:'rebound_rate',label:'Reb Rate',suffix:'%',hb:true},
+    {key:'i50_against',label:'I50 Agst',suffix:'',hb:false},
+    {key:'pts_per_i50_against',label:'Pts/I50 Agst',suffix:'',hb:false},
+  ],
+  con:[
+    {key:'hard_ball_gets',label:'Hard Ball Gets',suffix:'',hb:true},
+    {key:'gbg_pre',label:'GBG Pre-Clear',suffix:'',hb:true},
+    {key:'contested_poss',label:'Cont Poss',suffix:'',hb:null},
+    {key:'tackles_pre',label:'Tackles Pre',suffix:'',hb:null},
+    {key:'fk_against',label:'FK Against',suffix:'',hb:false},
+  ],
+  scor:[
+    {key:'accuracy',label:'Accuracy',suffix:'%',hb:true},
+    {key:'pts_per_i50',label:'Pts/I50',suffix:'',hb:true},
+    {key:'f50_marks_per_i50',label:'F50 Mk/I50',suffix:'',hb:true},
+    {key:'stop_scoring',label:'Stop Pts',suffix:'',hb:true},
+    {key:'to_scoring',label:'TO Pts',suffix:'',hb:true},
+  ],
+  stop:[
+    {key:'hitout_adv',label:'HO Adv',suffix:'',hb:true},
+    {key:'fp_per_stop',label:'1st/Stop',suffix:'',hb:true},
+    {key:'clear_per_stop',label:'Clear/Stop',suffix:'',hb:true},
+    {key:'stop_scoring',label:'Stop Pts',suffix:'',hb:true},
+    {key:'stop_against',label:'Stop Agst',suffix:'',hb:false},
+  ],
+};
+
+function cStatColor(statsKey, statKey, val, hb) {
+  if(val==null||hb==null) return 'var(--text-secondary)';
+  const allVals=Object.values(coachesData.teams).map(t=>t[statsKey]?.[statKey]).filter(v=>v!=null);
+  if(!allVals.length) return 'var(--text-secondary)';
+  const avg=allVals.reduce((a,b)=>a+b,0)/allVals.length;
+  return (hb ? val>avg : val<avg) ? 'var(--c-green)' : 'var(--c-red)';
+}
+
+function cPhaseStatGrid(phaseKey, statsObj, compact) {
+  if(!statsObj) return '';
+  const defs=C_PHASE_STATS[phaseKey]||[];
+  const sk=phaseKey+'_stats';
+  const items=defs.map(s=>{
+    const v=statsObj[s.key]; if(v==null) return '';
+    const color=cStatColor(sk,s.key,v,s.hb);
+    const disp=Number.isInteger(v)?v:(+v).toFixed(1);
+    return `<div class="pstat"><div class="pstat-label">${s.label}</div><div class="pstat-val" style="color:${color}">${disp}${s.suffix}</div></div>`;
+  }).filter(Boolean);
+  return items.length?`<div class="pstat-grid${compact?' compact':''}">${items.join('')}</div>`:'';
+}
+
 function cStars(n){return'★'.repeat(Math.max(0,n))+'☆'.repeat(Math.max(0,5-n));}
 function cRc(n){return n>=5?'r5':n>=4?'r4':n>=3?'r3':n>=2?'r2':'r1';}
 function cRank(ratingKey, val){
@@ -819,8 +884,9 @@ function renderCoachesEP(){
     const r=ep[p.ratingKey]||0, profile=ep[p.profileKey]||'—', rank=cRank(p.ratingKey,r);
     const info=C_PROFILE_INFO[profile]||{};
     const isWeakest=p.key===weakestPhase.key;
+    const statsGrid=cPhaseStatGrid(p.key,ep[p.key+'_stats'],false);
     const focusBlock=info.ep_focus?`<div class="phase-ep-focus"><div class="phase-ep-focus-title">${isWeakest?'Priority Focus':'Coaching Note'}</div>${info.ep_focus}</div>`:'';
-    cards+=`<div class="phase-card ${cRc(r)}"><div class="phase-name">${p.label}</div><div class="phase-profile">${profile}</div>${info.desc?`<div class="phase-desc">${info.desc}</div>`:''}<div class="phase-stars-row"><div class="phase-stars ${cRc(r)}">${cStars(r)}</div><div class="phase-rank"><strong>${rank}</strong> in comp</div></div>${focusBlock}</div>`;
+    cards+=`<div class="phase-card ${cRc(r)}"><div class="phase-name">${p.label}</div><div class="phase-profile">${profile}</div>${info.desc?`<div class="phase-desc">${info.desc}</div>`:''}<div class="phase-stars-row"><div class="phase-stars ${cRc(r)}">${cStars(r)}</div><div class="phase-rank"><strong>${rank}</strong> in comp</div></div>${statsGrid}${focusBlock}</div>`;
   }
   const strengths=C_PHASES.filter(p=>(ep[p.ratingKey]||0)>=4).map(p=>p.label);
   const weaknesses=C_PHASES.filter(p=>(ep[p.ratingKey]||0)<=2).map(p=>p.label);
@@ -864,8 +930,9 @@ function selectCoachesOpponent(name){
     if(diff>=2||isThreat) threats.push({phase:p.label,epR,oppR,profile:oppProfile,brief:info.opp_brief||''});
     else if(diff<=-2||isOppty) opportunities.push({phase:p.label,epR,oppR,brief:info.opp_brief||''});
     else even.push({phase:p.label,brief:info.opp_brief||''});
+    const oppStatsGrid=cPhaseStatGrid(p.key,opp[p.key+'_stats'],true);
     const descBlock=info.opp_brief?`<div class="matchup-desc">${info.opp_brief}</div>`:'';
-    cards+=`<div class="${cardClass}"><div class="matchup-phase">${p.label}${pill}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${name.split(' ')[0]}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${ep[p.profileKey]||'—'}</span><span>${oppProfile}</span></div>${descBlock}</div>`;
+    cards+=`<div class="${cardClass}"><div class="matchup-phase">${p.label}${pill}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${name.split(' ')[0]}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${ep[p.profileKey]||'—'}</span><span>${oppProfile}</span></div>${oppStatsGrid}${descBlock}</div>`;
   }
   let insights='';
   // Deduplicate — threats array may overlap with diff-based, use oppR threshold for display
