@@ -412,22 +412,21 @@ function switchTab(name, btn){
 
 async function uploadLeague() {
   const file = document.getElementById('leagueFileInput').files[0];
-  const msg = document.getElementById('leagueMsg');
-  if (!file) { showMsg(msg, 'Please select an .xlsx file first.', false); return; }
+  if (!file) { showMsg('leagueMsg', 'Please select an .xlsx file first.', false); return; }
   const form = new FormData();
   form.append('file', file);
-  msg.style.display = 'none';
+  document.getElementById('leagueMsg').style.display = 'none';
   try {
     const r = await fetch('/api/admin/league-upload', { method:'POST', headers:{'x-admin-token':token}, body: form });
     const d = await r.json();
     if (d.ok) {
-      showMsg(msg, `Uploaded successfully — ${d.teams.length} teams loaded: ${d.teams.join(', ')}`, true);
+      showMsg('leagueMsg', `Uploaded successfully — ${d.teams.length} teams loaded: ${d.teams.join(', ')}`, true);
       loadLeagueStatus();
     } else {
-      showMsg(msg, d.error || 'Upload failed', false);
+      showMsg('leagueMsg', d.error || 'Upload failed', false);
     }
   } catch(e) {
-    showMsg(msg, 'Upload error: ' + e.message, false);
+    showMsg('leagueMsg', 'Upload error: ' + e.message, false);
   }
 }
 
