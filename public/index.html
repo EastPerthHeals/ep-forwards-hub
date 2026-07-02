@@ -254,15 +254,18 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .phase-pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
 .phase-pill.danger{background:rgba(224,112,112,0.15);color:var(--c-red)}
 .phase-pill.oppty{background:rgba(78,203,141,0.12);color:var(--c-green)}
-.ep-radar-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;margin-bottom:8px;background:var(--bg-card2);border-radius:14px;padding:16px}
-.ep-rings-col{display:flex;flex-direction:column;gap:10px;flex:1;min-width:180px}
-.ep-ring-item{display:flex;align-items:center;gap:12px}
-.ep-ring-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px}
-.ep-ring-profile{font-size:12px;color:var(--accent-light);font-weight:500;line-height:1.3}
+.ep-radar-block{background:var(--bg-card2);border-radius:14px;padding:16px 8px 4px;margin-bottom:4px;display:flex;flex-direction:column;align-items:center}
+.ep-rings-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;padding:10px 12px 14px;background:var(--bg-card2);border-radius:0 0 14px 14px;margin-bottom:10px}
+.ep-ring-item-h{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:78px;max-width:130px;text-align:center}
+.ep-ring-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted)}
+.ep-ring-profile{font-size:11px;color:var(--accent-light);font-weight:500;line-height:1.3}
 .ep-panels{display:flex;flex-direction:column;gap:10px}
 .ep-phase-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;border-left-width:3px}
 .ep-phase-panel-name{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px}
 .ep-phase-panel-profile{font-size:15px;font-weight:600;color:var(--text-primary);margin-bottom:8px}
+.scout-radar-block{background:var(--bg-card2);border-radius:14px;padding:16px 8px 4px;display:flex;flex-direction:column;align-items:center;margin-bottom:4px}
+.radar-legend{display:flex;gap:20px;justify-content:center;flex-wrap:wrap;background:var(--bg-card2);border-radius:0 0 14px 14px;padding:6px 12px 12px;font-size:10px;color:var(--text-muted);margin-bottom:16px}
+.leaders-radar-block{background:var(--bg-card2);border-radius:14px;padding:16px 8px 12px;display:flex;flex-direction:column;align-items:center;margin-bottom:24px}
 .ep-rank-banner{background:var(--accent-dim2);border:1px solid rgba(74,127,193,0.2);border-radius:12px;padding:14px 18px;margin-bottom:24px}
 .ep-rank-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
 .ep-rank-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
@@ -883,38 +886,64 @@ function renderAllCoaches(){
 function phaseColor(r){const rc=cRc(r);return rc==='r5'?'var(--c-purple)':rc==='r4'?'var(--c-green)':rc==='r3'?'var(--accent)':rc==='r2'?'var(--c-orange)':'var(--c-red)';}
 function phaseColorHex(r){const rc=cRc(r);return rc==='r5'?'#b07fe8':rc==='r4'?'#4ecb8d':rc==='r3'?'#4a7fc1':rc==='r2'?'#e8a040':'#e07070';}
 
+// Radar order: BM(top) → SCOR → STOP → CON → TD (clockwise from top)
+const RADAR_ORDER=[C_PHASES[0],C_PHASES[3],C_PHASES[4],C_PHASES[2],C_PHASES[1]];
+const RADAR_ANCHORS=['middle','start','start','end','end'];
+
+function makeRadar({w,h,cx,cy,maxR,polygons,extraSVG='',labelFn}){
+  function rpt(rating,idx){const a=(idx*72-90)*Math.PI/180,r=(Math.min(rating,5)/5)*maxR;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
+  function pp(fn){return RADAR_ORDER.map((p,i)=>{const pt=rpt(fn(p),i);return`${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;}).join(' ');}
+  const grid=[1,2,3,4,5].map((r,i)=>`<polygon points="${pp(()=>r)}" fill="none" stroke="rgba(99,131,179,${i===4?'0.22':'0.08'})" stroke-width="${i===4?1.5:1}"/>`).join('');
+  const axes=RADAR_ORDER.map((_,i)=>{const pt=rpt(5,i);return`<line x1="${cx}" y1="${cy}" x2="${pt.x.toFixed(1)}" y2="${pt.y.toFixed(1)}" stroke="rgba(99,131,179,0.15)" stroke-width="1"/>`;}).join('');
+  const polys=polygons.map(pl=>{
+    const pts=pp(pl.fn);
+    const dot=pl.dots?RADAR_ORDER.map((p,i)=>{const pt=rpt(pl.fn(p),i);return`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${pl.dotR||4}" fill="${pl.dotFill||pl.stroke}" stroke="#161c26" stroke-width="1.5"/>`;}).join(''):'';
+    return`<polygon points="${pts}" fill="${pl.fill||'none'}" stroke="${pl.stroke}" stroke-width="${pl.w||2}" ${pl.dash?`stroke-dasharray="${pl.dash}"`:''}/>` + dot;
+  }).join('');
+  const labels=labelFn?RADAR_ORDER.map((p,i)=>{const a=(i*72-90)*Math.PI/180,lR=maxR+26,x=cx+lR*Math.cos(a),y=cy+lR*Math.sin(a);return labelFn(p,i,x,y);}).join(''):'';
+  return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${grid}${axes}${polys}${labels}${extraSVG}</svg>`;
+}
+
+const TEAM_BADGES={
+  'Claremont':        {abbr:'CLA',bg:'#003DA5',fg:'#FFD700'},
+  'East Fremantle':   {abbr:'EFR',bg:'#CC0000',fg:'#ffffff'},
+  'East Perth':       {abbr:'EP', bg:'#003087',fg:'#e63946'},
+  'Peel Thunder':     {abbr:'PEL',bg:'#1B4F8A',fg:'#ffffff'},
+  'Perth':            {abbr:'PER',bg:'#CC0000',fg:'#ffffff'},
+  'South Fremantle':  {abbr:'SFR',bg:'#CC0000',fg:'#003DA5'},
+  'Subiaco':          {abbr:'SUB',bg:'#003DA5',fg:'#FFD700'},
+  'Swan Districts':   {abbr:'SWN',bg:'#1a1a1a',fg:'#ffffff'},
+  'West Coast Eagles':{abbr:'WCE',bg:'#003087',fg:'#FFD700'},
+  'West Perth':       {abbr:'WPE',bg:'#012169',fg:'#87CEEB'},
+};
+
 function renderCoachesEP(){
   const ep=coachesData.teams['East Perth'];
   if(!ep){document.getElementById('coaches-ep-content').innerHTML='<p class="hint">East Perth not found in data.</p>';return;}
   const or=ep.overall_rating||0, oa=ep.overall_avg||0;
   const allTeams=Object.values(coachesData.teams);
 
-  // ── Radar chart ─────────────────────────────────────────────
-  // Clockwise from top: BM, SCOR, STOP, CON, TD
-  const radarOrder=[C_PHASES[0],C_PHASES[3],C_PHASES[4],C_PHASES[2],C_PHASES[1]];
-  const maxR=70, cx=115, cy=118;
-  function rpt(rating,idx){const a=(idx*72-90)*Math.PI/180,r=(rating/5)*maxR;return{x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)};}
-  function polyPts(fn){return radarOrder.map((p,i)=>{const pt=rpt(fn(p),i);return`${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;}).join(' ');}
+  // ── Large radar via shared helper ────────────────────────────
   function compAvgR(p){const v=allTeams.map(t=>t[p.ratingKey]||0).filter(v=>v>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:3;}
+  const cx=160,cy=158,maxR=118;
+  const centre=`<circle cx="${cx}" cy="${cy}" r="24" fill="rgba(74,127,193,0.08)" stroke="rgba(74,127,193,0.18)" stroke-width="1.5"/><text x="${cx}" y="${cy-4}" text-anchor="middle" fill="#e2e8f0" font-size="18" font-weight="700" font-family="Segoe UI">${or}★</text><text x="${cx}" y="${cy+11}" text-anchor="middle" fill="#8899b4" font-size="9" font-family="Segoe UI">Overall</text>`;
+  const radarSVG=makeRadar({w:320,h:314,cx,cy,maxR,
+    polygons:[
+      {fn:p=>compAvgR(p),fill:'rgba(255,255,255,0.03)',stroke:'rgba(136,153,180,0.3)',w:1.5,dash:'4,3'},
+      {fn:p=>ep[p.ratingKey]||0,fill:'rgba(74,127,193,0.2)',stroke:'#4a7fc1',w:2.5,dots:true,dotR:5,dotFill:null},
+    ],
+    extraSVG:centre,
+    labelFn:(p,i,x,y)=>{
+      const r=ep[p.ratingKey]||0;
+      return`<text x="${x.toFixed(1)}" y="${(y-7).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="11" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+7).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(r)}" font-size="12" font-family="Segoe UI" font-weight="700">${r}★</text>`;
+    }
+  });
 
-  const gridLines=[1,2,3,4,5].map((r,i)=>`<polygon points="${polyPts(()=>r)}" fill="none" stroke="rgba(99,131,179,${i===4?'0.22':'0.08'})" stroke-width="${i===4?1.5:1}"/>`).join('');
-  const axisLines=radarOrder.map((_,i)=>{const pt=rpt(5,i);return`<line x1="${cx}" y1="${cy}" x2="${pt.x.toFixed(1)}" y2="${pt.y.toFixed(1)}" stroke="rgba(99,131,179,0.15)" stroke-width="1"/>`;}).join('');
-  const avgPoly=`<polygon points="${polyPts(p=>compAvgR(p))}" fill="rgba(255,255,255,0.03)" stroke="rgba(136,153,180,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
-  const epPoly=`<polygon points="${polyPts(p=>ep[p.ratingKey]||0)}" fill="rgba(74,127,193,0.2)" stroke="#4a7fc1" stroke-width="2"/>`;
-  const epDots=radarOrder.map((p,i)=>{const pt=rpt(ep[p.ratingKey]||0,i),r=ep[p.ratingKey]||0;return`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${phaseColorHex(r)}" stroke="#161c26" stroke-width="1.5"/>`;}).join('');
-  const lR=maxR+24;
-  const anchors=['middle','start','start','end','end'];
-  const axisLabels=radarOrder.map((p,i)=>{
-    const a=(i*72-90)*Math.PI/180,x=cx+lR*Math.cos(a),y=cy+lR*Math.sin(a),r=ep[p.ratingKey]||0;
-    return`<text x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="${anchors[i]}" fill="#8899b4" font-size="8.5" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+6).toFixed(1)}" text-anchor="${anchors[i]}" fill="${phaseColorHex(r)}" font-size="9" font-family="Segoe UI" font-weight="700">${r}★</text>`;
-  }).join('');
-  const radarSVG=`<svg width="230" height="232" viewBox="0 0 230 232" style="flex-shrink:0">${gridLines}${axisLines}${avgPoly}${epPoly}${epDots}${axisLabels}<circle cx="${cx}" cy="${cy}" r="20" fill="rgba(74,127,193,0.08)" stroke="rgba(74,127,193,0.18)" stroke-width="1"/><text x="${cx}" y="${cy-4}" text-anchor="middle" fill="#e2e8f0" font-size="15" font-weight="700" font-family="Segoe UI">${or}★</text><text x="${cx}" y="${cy+9}" text-anchor="middle" fill="#8899b4" font-size="8" font-family="Segoe UI">Overall</text></svg>`;
-
-  // ── Rings column ─────────────────────────────────────────────
-  const ringR=21.5, ringC=2*Math.PI*ringR;
+  // ── Rings row (horizontal) ────────────────────────────────────
+  const ringR=26,ringC=2*Math.PI*ringR;
   const ringsHTML=C_PHASES.map(p=>{
-    const r=ep[p.ratingKey]||0, col=phaseColorHex(r), dash=(r/5)*ringC, gap=ringC-dash;
-    return`<div class="ep-ring-item"><svg width="52" height="52" viewBox="0 0 52 52" style="flex-shrink:0"><circle cx="26" cy="26" r="${ringR}" fill="none" stroke="rgba(99,131,179,0.1)" stroke-width="7"/><circle cx="26" cy="26" r="${ringR}" fill="none" stroke="${col}" stroke-width="7" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 26 26)"/><text x="26" y="26" text-anchor="middle" dominant-baseline="middle" fill="#e2e8f0" font-size="16" font-weight="700" font-family="Segoe UI">${r}</text></svg><div><div class="ep-ring-label">${p.label}</div><div class="ep-ring-profile">${ep[p.profileKey]||'—'}</div></div></div>`;
+    const r=ep[p.ratingKey]||0,col=phaseColorHex(r),dash=(r/5)*ringC,gap=ringC-dash;
+    return`<div class="ep-ring-item-h"><svg width="66" height="66" viewBox="0 0 66 66"><circle cx="33" cy="33" r="${ringR}" fill="none" stroke="rgba(99,131,179,0.1)" stroke-width="9"/><circle cx="33" cy="33" r="${ringR}" fill="none" stroke="${col}" stroke-width="9" stroke-dasharray="${dash.toFixed(1)} ${gap.toFixed(1)}" stroke-linecap="round" transform="rotate(-90 33 33)"/><text x="33" y="33" text-anchor="middle" dominant-baseline="middle" fill="#e2e8f0" font-size="19" font-weight="700" font-family="Segoe UI">${r}</text></svg><div class="ep-ring-label">${p.label}</div><div class="ep-ring-profile">${ep[p.profileKey]||'—'}</div></div>`;
   }).join('');
 
   // ── Phase detail panels ──────────────────────────────────────
@@ -942,9 +971,10 @@ function renderCoachesEP(){
   document.getElementById('coaches-ep-content').innerHTML=`
     <div class="overall-banner"><div><div class="overall-team">East Perth FC</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Ratings</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Phase Overview</div>
-    <div class="ep-radar-wrap">${radarSVG}<div class="ep-rings-col">${ringsHTML}</div></div>
-    <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:6px">— — — Comp average &nbsp;|&nbsp; <span style="color:#4a7fc1">━━━</span> East Perth</div>
-    <div class="section-label" style="margin-top:24px">Phase Detail</div>
+    <div class="ep-radar-block">${radarSVG}</div>
+    <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span style="opacity:0.5">— — Competition avg</span></div>
+    <div class="ep-rings-row">${ringsHTML}</div>
+    <div class="section-label" style="margin-top:20px">Phase Detail</div>
     <div class="ep-panels">${panels}</div>
     <div class="section-label" style="margin-top:24px">Season Analysis</div>
     <div class="ci-box"><div class="ci-title">Key Takeaways</div>${insights}</div>`;
@@ -986,9 +1016,23 @@ function selectCoachesOpponent(name){
   for(const w of shownThreats) insights+=`<div class="ci-row"><span class="ci-icon">🔴</span><span><strong>Threat — ${w.phase}:</strong> ${name} are rated ${w.oppR}★ as <em>${w.profile}</em>${w.brief?'. '+w.brief:''}</span></div>`;
   for(const o of shownOppty) insights+=`<div class="ci-row"><span class="ci-icon">🟢</span><span><strong>Opportunity — ${o.phase}:</strong> ${name} are rated ${o.oppR}★.${o.brief?' '+o.brief:' EP rated '+o.epR+'★ — look to exploit.'}</span></div>`;
   for(const e of shownEven) insights+=`<div class="ci-row"><span class="ci-icon">⚪</span><span><strong>${e.phase}:</strong> Evenly matched — outcome will depend on execution.${e.brief?' '+e.brief:''}</span></div>`;
+  // ── Scout dual radar ─────────────────────────────────────────
+  const scoutRadar=makeRadar({w:310,h:300,cx:155,cy:152,maxR:108,
+    polygons:[
+      {fn:p=>ep[p.ratingKey]||0,fill:'rgba(74,127,193,0.15)',stroke:'#4a7fc1',w:2.5,dots:true,dotR:4},
+      {fn:p=>opp[p.ratingKey]||0,fill:'rgba(230,57,70,0.12)',stroke:'#e63946',w:2,dots:true,dotR:4},
+    ],
+    labelFn:(p,i,x,y)=>{
+      const er=ep[p.ratingKey]||0,or2=opp[p.ratingKey]||0;
+      return`<text x="${x.toFixed(1)}" y="${(y-7).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="10" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+6).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(er)}" font-size="10" font-family="Segoe UI" font-weight="700">${er}★</text><text x="${x.toFixed(1)}" y="${(y+18).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(or2)}" font-size="10" font-family="Segoe UI">${or2}★</text>`;
+    }
+  });
   document.getElementById('coaches-scout-content').innerHTML=`
     <div class="overall-banner"><div><div class="overall-team">${name}</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Scouting Report</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
-    <div class="section-label">Phase Matchup — EP vs ${name}</div>
+    <div class="section-label">Phase Overview</div>
+    <div class="scout-radar-block">${scoutRadar}</div>
+    <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span><span style="color:#e63946">━━</span> ${name}</span></div>
+    <div class="section-label" style="margin-top:16px">Phase Matchup — EP vs ${name}</div>
     <div class="matchup-grid">${cards}</div>
     <div class="section-label" style="margin-top:24px">Coaching Insights</div>
     <div class="ci-box"><div class="ci-title">Game Plan vs ${name}</div>${insights||'<div class="ci-row"><span class="ci-icon">⚪</span><span>No major mismatches detected — execution and effort will determine the outcome.</span></div>'}</div>`;
@@ -1020,16 +1064,33 @@ function renderCoachesComp(){
     benchmarkCards+=`<div class="benchmark-card"><div class="benchmark-rank">${i+1}${suffix} Overall</div><div class="benchmark-team">${tname}</div><div class="benchmark-phases">${rows}</div></div>`;
   }
 
-  // Category leaders
-  const phaseMap={bm:'Ball Movement',td:'Team Defence',con:'Contest',scor:'Scoring',stop:'Stoppage'};
-  let leaders='<div class="leaders-grid">';
-  for(const [pk,pl] of Object.entries(phaseMap)){
-    const rk=pk+'_rating', prk=pk+'_profile';
+  // Category leaders radar — leader badge on each axis
+  const lcx=160,lcy=158,lmaxR=110;
+  function lrpt(rating,idx){const a=(idx*72-90)*Math.PI/180,r=(Math.min(rating,5)/5)*lmaxR;return{x:lcx+r*Math.cos(a),y:lcy+r*Math.sin(a)};}
+  // All teams as faint gray polygons
+  let allTeamPolys=Object.values(coachesData.teams).filter(t=>t!==ep).map(t=>({fn:p=>t[p.ratingKey]||0,fill:'none',stroke:'rgba(136,153,180,0.1)',w:1}));
+  // EP in blue
+  const epPolyL={fn:p=>ep?ep[p.ratingKey]||0:0,fill:'rgba(74,127,193,0.18)',stroke:'#4a7fc1',w:2,dots:true,dotR:4};
+  // Badge circles at each axis for the category leader
+  let badgeSVG='';
+  RADAR_ORDER.forEach((p,idx)=>{
+    const rk=p.ratingKey,prk=p.profileKey;
     const best=teams.reduce((b,t)=>(t[1][rk]||0)>(b[1][rk]||0)?t:b,teams[0]);
-    const r=best[1][rk]||0;
-    leaders+=`<div class="leader-card"><div class="leader-phase">${pl}</div><div class="leader-team">${best[0]}</div><div class="leader-profile">${best[1][prk]||''}</div><div class="leader-stars ${cRc(r)}">${cStars(r)}</div></div>`;
-  }
-  leaders+='</div>';
+    const r=best[1][rk]||0,badge=TEAM_BADGES[best[0]]||{abbr:best[0].slice(0,3).toUpperCase(),bg:'#334',fg:'#fff'};
+    const pt=lrpt(r,idx);
+    badgeSVG+=`<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="17" fill="${badge.bg}" stroke="${phaseColorHex(r)}" stroke-width="2.5"/><text x="${pt.x.toFixed(1)}" y="${(pt.y+4).toFixed(1)}" text-anchor="middle" fill="${badge.fg}" font-size="9" font-weight="700" font-family="Segoe UI">${badge.abbr}</text>`;
+  });
+  const leadersRadar=makeRadar({w:320,h:314,cx:lcx,cy:lcy,maxR:lmaxR,
+    polygons:[...allTeamPolys,epPolyL],
+    extraSVG:badgeSVG,
+    labelFn:(p,i,x,y)=>{
+      const rk=p.ratingKey;
+      const best=teams.reduce((b,t)=>(t[1][rk]||0)>(b[1][rk]||0)?t:b,teams[0]);
+      const r=best[1][rk]||0;
+      return`<text x="${x.toFixed(1)}" y="${(y-7).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="11" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+7).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(r)}" font-size="10" font-family="Segoe UI">${best[0].split(' ')[0]} ${r}★</text>`;
+    }
+  });
+  const leaders=`<div class="leaders-radar-block">${leadersRadar}</div><div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span style="opacity:0.5">Badges = category leader</span></div>`;
 
   // Full standings table
   let rows='';
