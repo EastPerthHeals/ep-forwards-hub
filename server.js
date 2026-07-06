@@ -297,6 +297,15 @@ app.post('/api/admin/rounds', requireAdmin, wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.patch('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
+  const data = await load();
+  const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
+  if (!round) return res.status(404).json({ error: 'Round not found' });
+  Object.assign(round, req.body);
+  await save(data);
+  res.json({ ok: true });
+}));
+
 app.delete('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
   const data = await load();
   data.rounds = data.rounds.filter(r => r.round_num !== parseInt(req.params.num));
