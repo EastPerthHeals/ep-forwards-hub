@@ -1145,7 +1145,7 @@ function buildMatchupCards(epData, oppData, oppName){
     if(diff>=2||isThreat) threats.push({phase:p.label,epR,oppR,profile:oppProfile,brief:info.opp_brief||''});
     else if(diff<=-2||isOppty) opportunities.push({phase:p.label,epR,oppR,brief:info.opp_brief||''});
     else even.push({phase:p.label,brief:info.opp_brief||''});
-    const oppShort=oppName.split(' ')[0];
+    const oppShort=TEAM_BADGES[oppName]?.abbr||oppName.split(' ')[0];
     cards+=`<div class="${cardClass}"><div class="matchup-phase">${p.label}${pill}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${oppShort}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${epData[p.profileKey]||'—'}</span><span>${oppProfile}</span></div>${cMatchupStatComparison(p.key,epData[p.key+'_stats'],oppData[p.key+'_stats'],oppShort)}${info.opp_brief?`<div class="matchup-desc">${info.opp_brief}</div>`:''}</div>`;
   }
   const shownThreats=[...new Map(threats.map(t=>[t.phase,t])).values()];
