@@ -1128,8 +1128,29 @@ function renderCoachesScoutTiles(){
   document.getElementById('coaches-scout-tiles').innerHTML=teams.map(t=>`<button class="team-tile" onclick="selectCoachesOpponent('${t}')">${t}</button>`).join('');
 }
 
-let scoutOpponentName='', scoutMatchupSplit='total';
+let scoutOpponentName='', scoutMatchupSplit='total', scoutRadarSplit='total';
 function setScoutMatchupSplit(key){scoutMatchupSplit=key;renderScoutMatchup();}
+function setScoutRadarSplit(key){scoutRadarSplit=key;renderScoutRadar();}
+
+function renderScoutRadar(){
+  if(!scoutOpponentName) return;
+  const epData=getTeamSplit('East Perth',scoutRadarSplit);
+  const oppData=getTeamSplit(scoutOpponentName,scoutRadarSplit);
+  const ep=epData||coachesData.teams['East Perth'];
+  const opp=oppData||coachesData.teams[scoutOpponentName];
+  const svg=makeRadar({w:640,h:516,cx:320,cy:258,maxR:165,
+    polygons:[
+      {fn:p=>ep[p.ratingKey]||0,fill:'rgba(74,127,193,0.15)',stroke:'#4a7fc1',w:3,dots:true,dotR:6},
+      {fn:p=>opp[p.ratingKey]||0,fill:'rgba(230,57,70,0.12)',stroke:'#e63946',w:2.5,dots:true,dotR:6},
+    ],
+    labelFn:(p,i,x,y)=>{
+      const er=ep[p.ratingKey]||0,or2=opp[p.ratingKey]||0;
+      return`<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="15" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+9).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(er)}" font-size="15" font-family="Segoe UI" font-weight="700">${er}★</text><text x="${x.toFixed(1)}" y="${(y+26).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(or2)}" font-size="15" font-family="Segoe UI">${or2}★</text>`;
+    }
+  });
+  document.getElementById('scout-full-radar').innerHTML=svg;
+  document.querySelectorAll('.split-tab[data-radar-split]').forEach(b=>b.classList.toggle('active',b.dataset.radarSplit===scoutRadarSplit));
+}
 
 function buildMatchupCards(epData, oppData, oppName){
   if(!epData||!oppData) return '<p class="hint" style="padding:12px">No data for this split.</p>';
@@ -1181,30 +1202,20 @@ function selectCoachesOpponent(name){
     return makeMiniRadarCard(d,d2,sk,SPLIT_PAIRS[sk]);
   }).join('');
 
-  // Large dual radar (Total Season)
-  const scoutRadar=makeRadar({w:640,h:516,cx:320,cy:258,maxR:165,
-    polygons:[
-      {fn:p=>ep[p.ratingKey]||0,fill:'rgba(74,127,193,0.15)',stroke:'#4a7fc1',w:3,dots:true,dotR:6},
-      {fn:p=>opp[p.ratingKey]||0,fill:'rgba(230,57,70,0.12)',stroke:'#e63946',w:2.5,dots:true,dotR:6},
-    ],
-    labelFn:(p,i,x,y)=>{
-      const er=ep[p.ratingKey]||0,or2=opp[p.ratingKey]||0;
-      return`<text x="${x.toFixed(1)}" y="${(y-9).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="15" font-family="Segoe UI">${p.label}</text><text x="${x.toFixed(1)}" y="${(y+9).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(er)}" font-size="15" font-family="Segoe UI" font-weight="700">${er}★</text><text x="${x.toFixed(1)}" y="${(y+26).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(or2)}" font-size="15" font-family="Segoe UI">${or2}★</text>`;
-    }
-  });
-
   document.getElementById('coaches-scout-content').innerHTML=`
     <div class="overall-banner"><div><div class="overall-team">${name}</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Scouting Report</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Phase Overview — Split Comparison</div>
     <div class="mini-radar-grid">${miniCards}</div>
     <div class="mini-radar-legend"><span style="color:#4a7fc1">━━ Total Season</span><span style="color:#e8c240">━━ Last 5 Rounds</span><span style="color:#4ecb8d">━━ Wins</span><span style="color:#e07070">━━ Losses</span><span style="color:var(--text-muted)">Solid = primary &nbsp;|&nbsp; Dashed = comparison &nbsp;|&nbsp; BM=Ball Movement &nbsp;SC=Scoring &nbsp;ST=Stoppage &nbsp;CON=Contest &nbsp;TD=Team Defence</span></div>
-    <div class="section-label" style="margin-top:4px">Total Season — Full Radar</div>
-    <div class="scout-radar-block">${scoutRadar}</div>
+    <div class="section-label" style="margin-top:4px">EP vs ${name} — Full Radar</div>
+    <div class="split-tabs">${['total','last5','wins','losses'].map(k=>`<button class="split-tab${k===scoutRadarSplit?' active':''}" data-radar-split="${k}" onclick="setScoutRadarSplit('${k}')">${SPLIT_LABELS[k]}</button>`).join('')}</div>
+    <div class="scout-radar-block" id="scout-full-radar"></div>
     <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span><span style="color:#e63946">━━</span> ${name}</span></div>
     <div class="section-label" style="margin-top:16px">Phase Matchup</div>
     <div class="split-tabs">${['total','last5','wins','losses'].map(k=>`<button class="split-tab${k===scoutMatchupSplit?' active':''}" data-scout-split="${k}" onclick="setScoutMatchupSplit('${k}')">${SPLIT_LABELS[k]}</button>`).join('')}</div>
     <div id="scout-matchup-detail"></div>`;
 
+  renderScoutRadar();
   renderScoutMatchup();
 }
 
