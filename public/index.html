@@ -243,14 +243,10 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .pstat-label{font-size:8.5px;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px;line-height:1.2}
 .pstat-val{font-size:12px;font-weight:700}
 .pstat-grid.compact .pstat{min-width:44px}
-.matchup-stat-compare{margin:8px 0 10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.06)}
-.matchup-stat-row{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
-.matchup-stat-team{background:var(--bg-card2);border-radius:8px;padding:6px 8px}
-.matchup-stat-team-hdr{font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:700;margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.06)}
-.matchup-stat-tiles{display:flex;flex-wrap:wrap;gap:3px}
-.mst{flex:1;min-width:46px;text-align:center;padding:4px 3px}
-.mst-label{font-size:8px;letter-spacing:0.3px;text-transform:uppercase;color:var(--text-muted);margin-bottom:1px;line-height:1.2}
-.mst-val{font-size:12px;font-weight:700}
+.matchup-stat-compare{margin:8px 0 4px;padding:8px 0 0;border-top:1px solid rgba(255,255,255,0.06)}
+.matchup-stat-labeled-row{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.matchup-stat-lbl{font-size:9px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap;min-width:28px;text-align:right;flex-shrink:0}
+.matchup-stat-tiles{display:flex;flex-wrap:wrap;gap:3px;flex:1}
 .phase-desc{font-size:11px;color:var(--text-muted);line-height:1.45;margin-bottom:10px;font-style:italic}
 .phase-ep-focus{margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(232,160,64,0.07);border:1px solid rgba(232,160,64,0.22);font-size:11px;color:var(--c-orange);line-height:1.5}
 .phase-ep-focus-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px;opacity:0.8}
@@ -885,22 +881,20 @@ function cMatchupStatComparison(phaseKey, epStats, oppStats, oppShortName) {
   function tiles(statsObj){
     return defs.map(s=>{
       const v=statsObj?.[s.key];
-      if(v==null) return `<div class="mst"><div class="mst-label">${s.label}</div><div class="mst-val" style="color:var(--text-muted)">—</div></div>`;
+      if(v==null) return `<div class="pstat"><div class="pstat-label">${s.label}</div><div class="pstat-val" style="color:var(--text-muted)">—</div></div>`;
       const color=cStatColor(sk,s.key,v,s.hb);
       const disp=Number.isInteger(v)&&!s.dp?v:(+v).toFixed(s.dp||1);
-      return `<div class="mst"><div class="mst-label">${s.label}</div><div class="mst-val" style="color:${color}">${disp}${s.suffix}</div></div>`;
+      return `<div class="pstat"><div class="pstat-label">${s.label}</div><div class="pstat-val" style="color:${color}">${disp}${s.suffix}</div></div>`;
     }).join('');
   }
   return `<div class="matchup-stat-compare">
-    <div class="matchup-stat-row">
-      <div class="matchup-stat-team">
-        <div class="matchup-stat-team-hdr" style="color:#4a7fc1">Us — EP</div>
-        <div class="matchup-stat-tiles">${tiles(epStats)}</div>
-      </div>
-      <div class="matchup-stat-team">
-        <div class="matchup-stat-team-hdr" style="color:#e63946">Them — ${oppShortName}</div>
-        <div class="matchup-stat-tiles">${tiles(oppStats)}</div>
-      </div>
+    <div class="matchup-stat-labeled-row">
+      <div class="matchup-stat-lbl" style="color:#e63946">${oppShortName}</div>
+      <div class="matchup-stat-tiles">${tiles(oppStats)}</div>
+    </div>
+    <div class="matchup-stat-labeled-row">
+      <div class="matchup-stat-lbl" style="color:#4a7fc1">EP</div>
+      <div class="matchup-stat-tiles">${tiles(epStats)}</div>
     </div>
   </div>`;
 }
