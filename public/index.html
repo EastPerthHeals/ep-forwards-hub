@@ -254,11 +254,11 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .phase-pill{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle}
 .phase-pill.danger{background:rgba(224,112,112,0.15);color:var(--c-red)}
 .phase-pill.oppty{background:rgba(78,203,141,0.12);color:var(--c-green)}
-.mini-radar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
-.mini-radar-card{background:var(--bg-card2);border-radius:12px;padding:10px 4px 6px;display:flex;flex-direction:column;align-items:center}
-.mini-radar-title{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;text-align:center}
-.mini-radar-empty{font-size:11px;color:var(--text-muted);padding:30px 10px;text-align:center}
-.mini-radar-legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:10px;color:var(--text-muted);margin-bottom:16px;padding:4px 0}
+.mini-radar-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:12px}
+.mini-radar-card{background:var(--bg-card2);border-radius:14px;padding:16px 10px 12px;display:flex;flex-direction:column;align-items:center}
+.mini-radar-title{font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;text-align:center;font-weight:600}
+.mini-radar-empty{font-size:13px;color:var(--text-muted);padding:50px 10px;text-align:center}
+.mini-radar-legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;font-size:13px;color:var(--text-secondary);margin-bottom:18px;padding:6px 2px;line-height:1.8}
 .split-tabs{display:flex;gap:4px;margin:18px 0 8px}
 .split-tab{flex:1;padding:7px 4px;text-align:center;font-size:11px;cursor:pointer;border-radius:7px;background:var(--bg-card);color:var(--text-muted);border:1px solid transparent;transition:all .15s}
 .split-tab.active{background:var(--bg-card2);color:var(--accent-light);border-color:rgba(74,127,193,0.35)}
@@ -911,6 +911,13 @@ const RADAR_ORDER=[C_PHASES[0],C_PHASES[3],C_PHASES[4],C_PHASES[2],C_PHASES[1]];
 const RADAR_ANCHORS=['middle','start','start','end','end'];
 const SPLIT_LABELS={total:'Total Season',last5:'Last 5 Rounds',wins:'Wins',losses:'Losses'};
 const PHASE_ABBRS={bm:'BM',td:'TD',con:'CON',scor:'SC',stop:'ST'};
+const SPLIT_COLORS={
+  total:{stroke:'#4a7fc1',fill:'rgba(74,127,193,0.20)'},
+  last5:{stroke:'#e8c240',fill:'rgba(232,194,64,0.15)'},
+  wins:{stroke:'#4ecb8d',fill:'rgba(78,203,141,0.18)'},
+  losses:{stroke:'#e07070',fill:'rgba(224,112,112,0.15)'},
+};
+const SPLIT_PAIRS={total:'last5',last5:'total',wins:'losses',losses:'wins'};
 
 function aggregateRounds(teamName, roundNums, roundsObj){
   const avail=roundNums.filter(n=>roundsObj[n]&&roundsObj[n].teams&&roundsObj[n].teams[teamName]);
@@ -946,20 +953,21 @@ function getTeamSplit(teamName, split){
   return aggregateRounds(teamName,nums,roundsData.rounds)||coachesData.teams[teamName]||null;
 }
 
-function makeMiniRadarCard(teamData, allTeamsArr, splitKey, extraPolygons){
-  const title=SPLIT_LABELS[splitKey];
-  if(!teamData) return`<div class="mini-radar-card"><div class="mini-radar-title">${title}</div><div class="mini-radar-empty">No data</div></div>`;
-  const cx=145,cy=140,maxR=82;
-  const compAvg=p=>{const v=allTeamsArr.map(t=>t[p.ratingKey]||0).filter(v=>v>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:3;};
-  const basePoly={fn:p=>teamData[p.ratingKey]||0,fill:'rgba(74,127,193,0.18)',stroke:'#4a7fc1',w:2,dots:true,dotR:4};
-  const polys=[{fn:compAvg,fill:'none',stroke:'rgba(136,153,180,0.2)',w:1,dash:'3,3'},...(extraPolygons||[basePoly])];
-  const svg=makeRadar({w:290,h:280,cx,cy,maxR,labelOffset:32,polygons:polys,
+function makeMiniRadarCard(primaryData, secondaryData, primaryKey, secondaryKey){
+  const title=SPLIT_LABELS[primaryKey];
+  const pc=SPLIT_COLORS[primaryKey],sc=SPLIT_COLORS[secondaryKey];
+  if(!primaryData) return`<div class="mini-radar-card"><div class="mini-radar-title" style="color:${pc.stroke}">${title}</div><div class="mini-radar-empty">No data</div></div>`;
+  const cx=190,cy=180,maxR=118;
+  const polys=[];
+  if(secondaryData) polys.push({fn:p=>secondaryData[p.ratingKey]||0,fill:sc.fill,stroke:sc.stroke,w:1.5,dots:true,dotR:3,dash:'5,3'});
+  polys.push({fn:p=>primaryData[p.ratingKey]||0,fill:pc.fill,stroke:pc.stroke,w:2.5,dots:true,dotR:4.5});
+  const svg=makeRadar({w:380,h:360,cx,cy,maxR,labelOffset:36,polygons:polys,
     labelFn:(p,i,x,y)=>{
-      const r=teamData[p.ratingKey]||0;
-      return`<text x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#6b7f9a" font-size="9.5" font-family="Segoe UI">${PHASE_ABBRS[p.key]}</text><text x="${x.toFixed(1)}" y="${(y+8).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(r)}" font-size="12" font-family="Segoe UI" font-weight="700">${r}★</text>`;
+      const r=primaryData[p.ratingKey]||0;
+      return`<text x="${x.toFixed(1)}" y="${(y-5).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="#8899b4" font-size="12" font-family="Segoe UI">${PHASE_ABBRS[p.key]}</text><text x="${x.toFixed(1)}" y="${(y+11).toFixed(1)}" text-anchor="${RADAR_ANCHORS[i]}" fill="${phaseColorHex(r)}" font-size="14" font-family="Segoe UI" font-weight="700">${r}★</text>`;
     }
   });
-  return`<div class="mini-radar-card"><div class="mini-radar-title">${title}</div>${svg}</div>`;
+  return`<div class="mini-radar-card"><div class="mini-radar-title" style="color:${pc.stroke}">${title}</div>${svg}</div>`;
 }
 
 function splitTabsHTML(activeKey, onclickFn){
@@ -1045,10 +1053,11 @@ function renderCoachesEP(){
   const or=ep.overall_rating||0,oa=ep.overall_avg||0;
   const allTeams=Object.values(coachesData.teams);
 
-  // 4 mini-radar cards
+  // 4 mini-radar cards — each split vs its pair
   const miniCards=['total','last5','wins','losses'].map(sk=>{
     const d=getTeamSplit('East Perth',sk);
-    return makeMiniRadarCard(d,allTeams,sk);
+    const d2=getTeamSplit('East Perth',SPLIT_PAIRS[sk]);
+    return makeMiniRadarCard(d,d2,sk,SPLIT_PAIRS[sk]);
   }).join('');
 
   // Large radar + rings (always Total Season)
@@ -1071,7 +1080,7 @@ function renderCoachesEP(){
     <div class="overall-banner"><div><div class="overall-team">East Perth FC</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Ratings</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Phase Overview — Split Comparison</div>
     <div class="mini-radar-grid">${miniCards}</div>
-    <div class="mini-radar-legend"><span style="color:#4a7fc1">━━ EP</span><span style="opacity:0.5">— — Comp avg</span><span style="color:#6b7f9a">BM=Ball Movement &nbsp;SC=Scoring &nbsp;ST=Stoppage &nbsp;CON=Contest &nbsp;TD=Team Defence</span></div>
+    <div class="mini-radar-legend"><span style="color:#4a7fc1">━━ Total Season</span><span style="color:#e8c240">━━ Last 5 Rounds</span><span style="color:#4ecb8d">━━ Wins</span><span style="color:#e07070">━━ Losses</span><span style="color:var(--text-muted)">Solid = primary &nbsp;|&nbsp; Dashed = comparison</span><span style="color:var(--text-muted)">BM=Ball Movement &nbsp;SC=Scoring &nbsp;ST=Stoppage &nbsp;CON=Contest &nbsp;TD=Team Defence</span></div>
     <div class="section-label" style="margin-top:4px">Total Season — Full Radar</div>
     <div class="ep-radar-block">${radarSVG}</div>
     <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span style="opacity:0.5">— — Competition avg</span></div>
@@ -1135,15 +1144,11 @@ function selectCoachesOpponent(name){
   const or=opp.overall_rating||0,oa=opp.overall_avg||0;
   const allTeams=Object.values(coachesData.teams);
 
-  // 4 mini dual-radar cards
+  // 4 mini-radar cards — opponent vs itself (paired splits)
   const miniCards=['total','last5','wins','losses'].map(sk=>{
-    const epD=getTeamSplit('East Perth',sk),oppD=getTeamSplit(name,sk);
-    const polys=epD&&oppD?[
-      {fn:p=>epD[p.ratingKey]||0,fill:'rgba(74,127,193,0.15)',stroke:'#4a7fc1',w:2,dots:true,dotR:3},
-      {fn:p=>oppD[p.ratingKey]||0,fill:'rgba(230,57,70,0.1)',stroke:'#e63946',w:1.5,dots:true,dotR:3},
-    ]:null;
-    const labelTeam=epD||opp;
-    return makeMiniRadarCard(labelTeam,allTeams,sk,polys);
+    const d=getTeamSplit(name,sk);
+    const d2=getTeamSplit(name,SPLIT_PAIRS[sk]);
+    return makeMiniRadarCard(d,d2,sk,SPLIT_PAIRS[sk]);
   }).join('');
 
   // Large dual radar (Total Season)
@@ -1162,7 +1167,7 @@ function selectCoachesOpponent(name){
     <div class="overall-banner"><div><div class="overall-team">${name}</div><div style="font-size:12px;color:var(--text-muted)">Season Profile &amp; Scouting Report</div></div><div style="text-align:right"><div class="overall-stars ${cRc(or)}">${cStars(or)}</div><div class="overall-avg">${oa.toFixed?oa.toFixed(1):oa} / 5.0 average</div></div></div>
     <div class="section-label">Phase Overview — Split Comparison</div>
     <div class="mini-radar-grid">${miniCards}</div>
-    <div class="mini-radar-legend"><span style="color:#4a7fc1">━━ EP</span><span style="color:#e63946">━━ ${name.split(' ')[0]}</span><span style="opacity:0.5">— — Comp avg &nbsp;|&nbsp; BM SC ST CON TD</span></div>
+    <div class="mini-radar-legend"><span style="color:#4a7fc1">━━ Total Season</span><span style="color:#e8c240">━━ Last 5 Rounds</span><span style="color:#4ecb8d">━━ Wins</span><span style="color:#e07070">━━ Losses</span><span style="color:var(--text-muted)">Solid = primary &nbsp;|&nbsp; Dashed = comparison &nbsp;|&nbsp; BM=Ball Movement &nbsp;SC=Scoring &nbsp;ST=Stoppage &nbsp;CON=Contest &nbsp;TD=Team Defence</span></div>
     <div class="section-label" style="margin-top:4px">Total Season — Full Radar</div>
     <div class="scout-radar-block">${scoutRadar}</div>
     <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span><span style="color:#e63946">━━</span> ${name}</span></div>
