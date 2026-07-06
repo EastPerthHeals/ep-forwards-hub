@@ -283,6 +283,21 @@ select option{background:#1c2333}
       <div class="card-title">Current Data</div>
       <div id="leagueStatusContent" style="font-size:13px;color:var(--secondary);line-height:1.8"></div>
     </div>
+    <div class="card">
+      <div class="card-title">Round-by-Round Data — Upload Individual Round Files</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+        Upload the "Team Profile Data (League Totals RX)" files for each round. These power the
+        Last 5 Rounds, Wins, and Losses splits across EP Report, Opponent Scout, and Competition.
+        Select multiple files at once — round numbers are detected from the filename (e.g. "R1", "R13").
+      </p>
+      <div class="field">
+        <label>Round Files (.xlsx) — select one or all at once</label>
+        <input type="file" id="roundFilesInput" accept=".xlsx" multiple style="padding:8px 0;border:none;background:none;color:var(--text)"/>
+      </div>
+      <button class="btn" onclick="uploadRounds()">Upload Round Files</button>
+      <div class="msg" id="roundsMsg"></div>
+      <div id="roundsLoaded" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
+    </div>
   </div>
 
   <div class="panel" id="panel-analysis">
@@ -427,6 +442,29 @@ async function uploadLeague() {
     }
   } catch(e) {
     showMsg('leagueMsg', 'Upload error: ' + e.message, false);
+  }
+}
+
+async function uploadRounds() {
+  const files = document.getElementById('roundFilesInput').files;
+  if (!files.length) { showMsg('roundsMsg', 'Please select at least one .xlsx file.', false); return; }
+  const form = new FormData();
+  for (const f of files) form.append('roundFiles', f);
+  document.getElementById('roundsMsg').style.display = 'none';
+  document.getElementById('roundsLoaded').textContent = 'Uploading...';
+  try {
+    const r = await fetch('/api/admin/league-rounds-upload', { method:'POST', headers:{'x-admin-token':token}, body: form });
+    const d = await r.json();
+    if (d.ok) {
+      const ok = d.results.filter(x=>x.ok).map(x=>`R${x.round}`).join(', ');
+      const errs = d.results.filter(x=>x.error).map(x=>`${x.file}: ${x.error}`).join('; ');
+      showMsg('roundsMsg', `Uploaded: ${ok}${errs?' | Errors: '+errs:''}`, !errs);
+      document.getElementById('roundsLoaded').textContent = `Rounds stored: ${d.rounds.map(n=>'R'+n).join(', ')}`;
+    } else {
+      showMsg('roundsMsg', d.error || 'Upload failed', false);
+    }
+  } catch(e) {
+    showMsg('roundsMsg', 'Upload error: ' + e.message, false);
   }
 }
 

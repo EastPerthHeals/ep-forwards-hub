@@ -234,4 +234,19 @@ async function setLeagueData(data) {
   );
 }
 
-module.exports = { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData };
+async function getLeagueRoundsData() {
+  const database = await connect();
+  const doc = await database.collection('league').findOne({ _id: 'rounds' });
+  return doc ? doc.data : null;
+}
+
+async function setLeagueRoundsData(data) {
+  const database = await connect();
+  await database.collection('league').updateOne(
+    { _id: 'rounds' },
+    { $set: { data, updated_at: new Date() } },
+    { upsert: true }
+  );
+}
+
+module.exports = { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, ALL_ANALYSIS_KEYS, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData, getLeagueRoundsData, setLeagueRoundsData };

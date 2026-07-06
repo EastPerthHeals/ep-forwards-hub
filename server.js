@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const multer = require('multer');
 const XLSX = require('xlsx');
-const { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData } = require('./db');
+const { load, save, getSitePassword, setSitePassword, getGamedayPassword, setGamedayPassword, getAdminPassword, setAdminPassword, getAnalysisVisible, setAnalysisVisible, getOppositionTeam, getAllOpposition, setOppositionTeam, getOppositionNotes, addOppositionNote, deleteOppositionNote, getRoundNotes, addRoundNote, deleteRoundNote, getLeagueData, setLeagueData, getLeagueRoundsData, setLeagueRoundsData } = require('./db');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -388,6 +388,92 @@ app.post('/api/admin/league-upload', requireAdmin, upload.single('file'), wrap(a
   const data = parseLeagueExcel(req.file.buffer);
   await setLeagueData(data);
   res.json({ ok: true, teams: Object.keys(data.teams) });
+}));
+
+function parseLeagueRoundFile(buffer, roundNum) {
+  const wb = XLSX.read(buffer, { type: 'buffer' });
+  function sheet(name) { return XLSX.utils.sheet_to_json(wb.Sheets[name] || {}, { defval: null }); }
+  const overall = sheet('OVERALL_RATING').filter(r => WAFL_TEAMS.includes(r['Team']));
+  const bm = sheet('BM_CALC'); const td = sheet('TD_CALC'); const con = sheet('CON_CALC');
+  const scor = sheet('SCOR_CALC'); const stop = sheet('STOP_CALC');
+  const bmRaw = sheet('BM_RAW_DATA'); const tdRaw = sheet('TD_RAW_DATA');
+  const conRaw = sheet('CON_RAW_DATA'); const scorRaw = sheet('SCOR_RAW_DATA');
+  const stopRaw = sheet('STOP_DATA');
+  const teams = {};
+  for (const r of overall) {
+    teams[r['Team']] = {
+      overall_rating: r['Overall Rating (Rounded)'], overall_avg: r['Overall Avg (1–5)'],
+      bm_rating: r['Ball Movement Rating'], td_rating: r['Team Defence Rating'],
+      con_rating: r['Contest Rating'], scor_rating: r['Scoring Rating'], stop_rating: r['Stoppage Rating'],
+    };
+  }
+  for (const r of bm) { if (teams[r['Team']]) teams[r['Team']].bm_profile = r['BM_Profile']; }
+  for (const r of td) { if (teams[r['Team']]) teams[r['Team']].td_profile = r['TD_Profile']; }
+  for (const r of con) { const n=r['TEAM']||r['Team']; if (teams[n]) teams[n].con_profile=r['PROFILE']||r['CON_Profile']; }
+  for (const r of scor) { if (teams[r['Team']]) teams[r['Team']].scor_profile = r['SCOR_Profile']; }
+  for (const r of stop) { if (teams[r['Team']]) teams[r['Team']].stop_profile = r['STOP_Profile']; }
+  for (const r of bmRaw) {
+    if (!teams[r['Team']]) continue;
+    const k=r['Kick']||0, hb=r['Handball']||0;
+    teams[r['Team']].bm_stats = { disposal_eff:r['Disposal Eff %'], kicking_eff:r['Kicking Eff %'], kick_pct:k+hb>0?Math.round(k/(k+hb)*100):null, unc_marks:r['Uncontested Mark'], turnovers:r['Turnover'] };
+  }
+  for (const r of tdRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].td_stats = { intercept_marks:r['intercept Mark'], intercept_poss:r['Intercept Possession'], rebound_rate:r['Rebound 50 Rate %']!=null?Math.round(r['Rebound 50 Rate %']*10)/10:null, i50_against:r['Inside 50 Against'], pts_per_i50_against:r['Pts Agst p In50 Agst']!=null?Math.round(r['Pts Agst p In50 Agst']*100)/100:null };
+  }
+  for (const r of conRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].con_stats = { hard_ball_gets:r['Hard Ball Get'], gbg_pre:r['Ground Ball Get Pre-Clearance'], contested_poss:r['Contested Possession'], tackles_pre:r['Tackles Pre Clearance'], fk_against:r['Free Kick Against'] };
+  }
+  for (const r of scorRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].scor_stats = { accuracy:r['Scoring Accuracy %'], pts_per_i50:r['Points per Inside 50']!=null?Math.round(r['Points per Inside 50']*100)/100:null, f50_marks_per_i50:r['F50 Marks per Inside 50']!=null?Math.round(r['F50 Marks per Inside 50']*1000)/1000:null, stop_scoring:r['Stoppage Scoring Points '], to_scoring:r['Turnover Scoring Points '] };
+  }
+  for (const r of stopRaw) {
+    if (!teams[r['Team']]) continue;
+    teams[r['Team']].stop_stats = { hitout_adv:r['Hitout to Advantage'], fp_per_stop:r['First Possession per Stoppage']!=null?Math.round(r['First Possession per Stoppage']*100)/100:null, clear_per_stop:r['Clearance per Stoppage']!=null?Math.round(r['Clearance per Stoppage']*100)/100:null, stop_scoring:r['Stoppage Scoring Points '], stop_against:r['Stoppage Scoring Points Against'] };
+  }
+  // W/L from RAW DATA
+  const rawRows = sheet('RAW DATA');
+  let forPts={}, againstPts={}, section='FOR';
+  for (const r of rawRows) {
+    const num = r['#'];
+    if (typeof num==='string' && num.includes('AGAINST')) { section='AGAINST'; continue; }
+    if (typeof num==='string') continue;
+    if (typeof num==='number' && r['Club']) {
+      if (section==='FOR') forPts[r['Club']]=r['Points'];
+      else againstPts[r['Club']]=r['Points'];
+    }
+  }
+  for (const name of WAFL_TEAMS) {
+    if (teams[name]) teams[name].won = (forPts[name]!=null&&againstPts[name]!=null) ? forPts[name]>againstPts[name] : null;
+  }
+  return { roundNum, teams };
+}
+
+app.get('/api/league/rounds-data', requireSiteAccess, wrap(async (req, res) => {
+  const data = await getLeagueRoundsData();
+  res.json(data || {});
+}));
+
+app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFiles', 20), wrap(async (req, res) => {
+  if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
+  const existing = await getLeagueRoundsData() || { rounds: {} };
+  const results = [];
+  for (const file of req.files) {
+    const match = file.originalname.match(/R(\d+)/i);
+    if (!match) { results.push({ file: file.originalname, error: 'Could not detect round number from filename' }); continue; }
+    const roundNum = parseInt(match[1]);
+    try {
+      const roundData = parseLeagueRoundFile(file.buffer, roundNum);
+      existing.rounds[roundNum] = roundData;
+      results.push({ file: file.originalname, round: roundNum, ok: true });
+    } catch(e) {
+      results.push({ file: file.originalname, error: e.message });
+    }
+  }
+  await setLeagueRoundsData(existing);
+  res.json({ ok: true, results, rounds: Object.keys(existing.rounds).sort((a,b)=>a-b) });
 }));
 
 app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));
