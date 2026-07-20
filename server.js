@@ -98,6 +98,20 @@ function parseLeagueExcel(buffer) {
     };
   }
 
+  // Store ALL numeric columns from all raw sheets so the Raw Stats explorer can query anything
+  const SKIP_KEYS = new Set(['Team','TEAM','#','Club','Rank','Round']);
+  for (const rows of [bmRaw, tdRaw, conRaw, scorRaw, stopRaw]) {
+    for (const r of rows) {
+      const name = r['Team'] || r['TEAM'];
+      if (!teams[name]) continue;
+      if (!teams[name].raw_all) teams[name].raw_all = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (SKIP_KEYS.has(k) || v == null || typeof v !== 'number') continue;
+        teams[name].raw_all[k.trim()] = v;
+      }
+    }
+  }
+
   return { teams, updated_at: new Date().toISOString() };
 }
 
@@ -433,6 +447,21 @@ function parseLeagueRoundFile(buffer, roundNum) {
     if (!teams[r['Team']]) continue;
     teams[r['Team']].stop_stats = { hitout_adv:r['Hitout to Advantage'], fp_per_stop:r['First Possession per Stoppage']!=null?Math.round(r['First Possession per Stoppage']*100)/100:null, clear_per_stop:r['Clearance per Stoppage']!=null?Math.round(r['Clearance per Stoppage']*100)/100:null, stop_scoring:r['Stoppage Scoring Points '], stop_against:r['Stoppage Scoring Points Against'] };
   }
+
+  // Store ALL numeric columns from all raw sheets
+  const SKIP_KEYS2 = new Set(['Team','TEAM','#','Club','Rank','Round']);
+  for (const rows of [bmRaw, tdRaw, conRaw, scorRaw, stopRaw]) {
+    for (const r of rows) {
+      const name = r['Team'] || r['TEAM'];
+      if (!teams[name]) continue;
+      if (!teams[name].raw_all) teams[name].raw_all = {};
+      for (const [k, v] of Object.entries(r)) {
+        if (SKIP_KEYS2.has(k) || v == null || typeof v !== 'number') continue;
+        teams[name].raw_all[k.trim()] = v;
+      }
+    }
+  }
+
   // W/L from RAW DATA
   const rawRows = sheet('RAW DATA');
   let forPts={}, againstPts={}, section='FOR';
