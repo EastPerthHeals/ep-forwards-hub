@@ -893,13 +893,22 @@ function renderRawStats(){
         ${['Season','Last 5','Wins','Losses'].map(h=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:center">${h}</div>`).join('')}
       </div>`;
 
-    const colors = ['#4a7fc1','#e8c240','#4ecb8d','#e07070'];
+    function cellColor(v, season) {
+      if(v==null||season==null||season===0) return 'var(--text)';
+      const pct = (v - season) / Math.abs(season);
+      const better = lowerBetter ? pct < -0.15 : pct > 0.15;
+      const worse  = lowerBetter ? pct > 0.15  : pct < -0.15;
+      if(better) return '#4ecb8d';
+      if(worse)  return '#e07070';
+      return 'var(--text)';
+    }
+
     const row = (rowLabel, vals, rowColor) => `
       <div style="display:grid;grid-template-columns:90px repeat(4,1fr);gap:6px;margin-bottom:6px;align-items:center">
         <div style="font-size:11px;font-weight:700;color:${rowColor}">${rowLabel}</div>
         ${[vals.season,vals.last5,vals.wins,vals.losses].map((v,i)=>`
           <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:8px 4px;text-align:center">
-            <div style="font-size:17px;font-weight:700;color:${colors[i]}">${fmt(v)}</div>
+            <div style="font-size:17px;font-weight:700;color:${i===0?'var(--text)':cellColor(v,vals.season)}">${fmt(v)}</div>
           </div>`).join('')}
       </div>`;
 
