@@ -1153,7 +1153,8 @@ function getSplitRoundNums(teamName, split){
 function getTeamSplit(teamName, split){
   if(split==='total'||!roundsData) return coachesData.teams[teamName]||null;
   const nums=getSplitRoundNums(teamName,split);
-  return aggregateRounds(teamName,nums,roundsData.rounds)||coachesData.teams[teamName]||null;
+  if(!nums.length) return null;
+  return aggregateRounds(teamName,nums,roundsData.rounds)||null;
 }
 
 function makeMiniRadarCard(primaryData, secondaryData, primaryKey, secondaryKey){
