@@ -842,10 +842,10 @@ function onRawTeamChange(){
     const lowerBetter = RAW_LOWER_IS_BETTER.has(k)||RAW_LOWER_IS_BETTER.has(RAW_STAT_LABELS[k]||k);
     const oppWins  = avgField(winRnds,  k, 'raw_all_against');
     const oppLoss  = avgField(lossRnds, k, 'raw_all_against');
-    // Orange if opposition performs 15%+ better in wins (danger stat)
+    // Orange if opposition performs 15%+ better in Claremont's losses vs wins (danger stat)
     let warning = false;
-    if(oppWins!=null && oppLoss!=null && oppLoss!==0){
-      const pct = (oppWins - oppLoss) / Math.abs(oppLoss);
+    if(oppWins!=null && oppLoss!=null && oppWins!==0){
+      const pct = (oppLoss - oppWins) / Math.abs(oppWins);
       warning = lowerBetter ? pct < -0.15 : pct > 0.15;
     }
     return `<button class="raw-stat-chip${warning?' warning':''}" data-stat="${k}" data-warning="${warning?'1':'0'}" onclick="toggleRawStat('${k}')">${RAW_STAT_LABELS[k]||k}</button>`;
