@@ -493,7 +493,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
       </div>
       <div id="rawStatPickerWrap" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Statistics <span id="rawStatCount" style="color:var(--text-muted);font-weight:400">(0 / 5 selected)</span></label>
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Statistics <span id="rawStatCount" style="color:var(--text-muted);font-weight:400">(0 / 10 selected)</span></label>
           <button onclick="clearRawStats()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:0">Clear all</button>
         </div>
         <div id="rawStatChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px"></div>
@@ -838,7 +838,7 @@ function toggleRawStat(key){
   if(idx>=0){
     rawSelectedStats.splice(idx,1);
   } else {
-    if(rawSelectedStats.length>=5) return;
+    if(rawSelectedStats.length>=10) return;
     rawSelectedStats.push(key);
   }
   // Update chip active states
@@ -857,7 +857,7 @@ function clearRawStats(){
 }
 
 function updateRawStatCount(){
-  document.getElementById('rawStatCount').textContent=`(${rawSelectedStats.length} / 5 selected)`;
+  document.getElementById('rawStatCount').textContent=`(${rawSelectedStats.length} / 10 selected)`;
 }
 
 function renderRawStats(){
@@ -922,7 +922,13 @@ function renderRawStats(){
       </div>`;
   }).join('');
 
-  out.innerHTML = tiles || `<p class="hint">No data — upload round files to populate.</p>`;
+  const legend = `<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <span style="font-weight:600;color:var(--text-secondary)">Colour guide:</span>
+    <span><span style="color:#4ecb8d;font-weight:700">Green</span> = 15%+ better than the other split</span>
+    <span><span style="color:#e07070;font-weight:700">Red</span> = 15%+ worse than the other split</span>
+    <span>Compared within each row (wins vs losses)</span>
+  </div>`;
+  out.innerHTML = tiles ? legend + tiles : `<p class="hint">No data — upload round files to populate.</p>`;
 }
 
 // ── COACHES LEAGUE DATA ───────────────────────────────────────────────────────
