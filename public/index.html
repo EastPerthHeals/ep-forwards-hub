@@ -204,6 +204,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .ci-row{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-secondary);line-height:1.5}
 .ci-row:last-child{border-bottom:none}
 .ci-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.ci-subhead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px}
 .team-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
 .team-tile{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:all .15s}
 .team-tile:hover{border-color:var(--accent);color:var(--text-primary)}
@@ -1169,14 +1170,119 @@ function buildMatchupCards(epData, oppData, oppName){
     const oppShort=TEAM_BADGES[oppName]?.abbr||oppName.split(' ')[0];
     cards+=`<div class="${cardClass}"><div class="matchup-phase">${p.label}${pill}</div><div class="matchup-vs"><div class="matchup-side"><div class="matchup-team-lbl">EP</div><div class="matchup-rating ${cRc(epR)}">${epR}★</div></div><div class="matchup-arrow" style="color:${arrowColor}">${arrow}</div><div class="matchup-side"><div class="matchup-team-lbl">${oppShort}</div><div class="matchup-rating ${cRc(oppR)}">${oppR}★</div></div></div><div class="matchup-profiles"><span>${epData[p.profileKey]||'—'}</span><span>${oppProfile}</span></div>${cMatchupStatComparison(p.key,epData[p.key+'_stats'],oppData[p.key+'_stats'],oppShort)}${info.opp_brief?`<div class="matchup-desc">${info.opp_brief}</div>`:''}</div>`;
   }
-  const shownThreats=[...new Map(threats.map(t=>[t.phase,t])).values()];
-  const shownOppty=[...new Map(opportunities.map(o=>[o.phase,o])).values()].filter(o=>!shownThreats.find(t=>t.phase===o.phase));
-  const shownEven=even.filter(e=>!shownThreats.find(t=>t.phase===e.phase)&&!shownOppty.find(o=>o.phase===e.phase));
-  let insights='';
-  for(const w of shownThreats) insights+=`<div class="ci-row"><span class="ci-icon">🔴</span><span><strong>Threat — ${w.phase}:</strong> ${oppName} rated ${w.oppR}★ as <em>${w.profile}</em>${w.brief?'. '+w.brief:''}</span></div>`;
-  for(const o of shownOppty) insights+=`<div class="ci-row"><span class="ci-icon">🟢</span><span><strong>Opportunity — ${o.phase}:</strong> ${oppName} rated ${o.oppR}★.${o.brief?' '+o.brief:' EP rated '+o.epR+'★ — look to exploit.'}</span></div>`;
-  for(const e of shownEven) insights+=`<div class="ci-row"><span class="ci-icon">⚪</span><span><strong>${e.phase}:</strong> Evenly matched.${e.brief?' '+e.brief:''}</span></div>`;
-  return`<div class="matchup-grid">${cards}</div><div class="section-label" style="margin-top:24px">Coaching Insights</div><div class="ci-box"><div class="ci-title">Game Plan vs ${oppName}</div>${insights||'<div class="ci-row"><span class="ci-icon">⚪</span><span>No major mismatches — execution determines the outcome.</span></div>'}</div>`;
+  return`<div class="matchup-grid">${cards}</div>`;
+}
+
+function buildSynthesisedInsights(oppName){
+  const total=getTeamSplit(oppName,'total');
+  const last5=getTeamSplit(oppName,'last5');
+  const wins=getTeamSplit(oppName,'wins');
+  const losses=getTeamSplit(oppName,'losses');
+  if(!total) return '';
+
+  const contain=[], attack=[], form=[];
+
+  for(const p of C_PHASES){
+    const wR=wins?wins[p.ratingKey]||0:0;
+    const lR=losses?losses[p.ratingKey]||0:0;
+    const l5R=last5?last5[p.ratingKey]||0:0;
+    const totR=total[p.ratingKey]||0;
+    const profile=total[p.profileKey]||'';
+    const info=C_PROFILE_INFO[profile]||{};
+
+    // What they do consistently well in wins — must contain
+    if(wins && wR>=4){
+      const drop=losses && lR<=2;
+      contain.push({phase:p.label,wR,lR,profile,brief:info.opp_brief||'',conditional:drop});
+    }
+    // What collapses in losses — exploit
+    if(losses && lR<=2 && (!wins || wR<4)){
+      attack.push({phase:p.label,wR,lR,profile,brief:info.opp_brief||''});
+    }
+    // Recent form shift vs season
+    if(last5 && Math.abs(l5R-totR)>=2){
+      form.push({phase:p.label,totR,l5R,up:l5R>totR});
+    }
+  }
+
+  let html='';
+
+  if(contain.length){
+    html+=`<div class="ci-subhead">🔒 Contain — What drives their wins</div>`;
+    for(const c of contain){
+      const cond=c.conditional?` (drops to ${c.lR}★ in losses — it's not guaranteed)`:` (holds ${c.wR}★ even in losses)`;
+      html+=`<div class="ci-row"><span class="ci-icon">🔴</span><span><strong>${c.phase}:</strong> Rated ${c.wR}★ in wins as <em>${c.profile}</em>${cond}. ${c.brief}</span></div>`;
+    }
+  }
+
+  if(attack.length){
+    html+=`<div class="ci-subhead" style="margin-top:14px">⚡ Attack — What falls apart in their losses</div>`;
+    for(const a of attack){
+      const winNote=wins&&a.wR?` (${a.wR}★ in wins vs ${a.lR}★ in losses)`:'';
+      html+=`<div class="ci-row"><span class="ci-icon">🟢</span><span><strong>${a.phase}:</strong> Drops to ${a.lR}★ when they lose${winNote}. ${a.brief}</span></div>`;
+    }
+  }
+
+  if(form.length){
+    html+=`<div class="ci-subhead" style="margin-top:14px">📈 Recent Form — Last 5 rounds shift</div>`;
+    for(const f of form){
+      const dir=f.up?'improved':'declined';
+      const icon=f.up?'🟡':'🟠';
+      html+=`<div class="ci-row"><span class="ci-icon">${icon}</span><span><strong>${f.phase}:</strong> ${dir} from ${f.totR}★ (season) to ${f.l5R}★ in last 5 rounds.</span></div>`;
+    }
+  }
+
+  if(!html) html=`<div class="ci-row"><span class="ci-icon">⚪</span><span>Consistent across all splits — execution determines the outcome.</span></div>`;
+
+  return`<div class="section-label" style="margin-top:24px">Coaching Insights</div><div class="ci-box"><div class="ci-title">Game Plan vs ${oppName} — Synthesised</div><div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Combining full season, last 5 rounds, and wins vs losses — weighted toward recent form and split patterns.</div>${html}</div>`;
+}
+
+function buildScoutPlayerSection(oppName, players){
+  if(!players||!players.length) return '';
+
+  // Identify dangerous players by volume + impact stats
+  const scored=players.filter(p=>p.mt>=6).map(p=>{
+    const danger=(p.i50||0)*3+(p.sa||0)*4+(p.g||0)*5+(p.m||0)*1.5+(p.cp||0)*0.8+(p.ke_pct||0)*0.05;
+    const weak=100-(p.ke_pct||50)+(p.r50||0===0?10:0);
+    return{...p,dangerScore:danger,weakScore:weak};
+  }).sort((a,b)=>b.dangerScore-a.dangerScore);
+
+  const featured=scored.slice(0,3);
+  if(!featured.length) return '';
+
+  let cards='';
+  for(const p of featured){
+    // Build "dangerous" bullets
+    let dangerRows='';
+    if(p.i50>=3) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.i50.toFixed(1)} I50/game — major forward entry threat</span></div>`;
+    if(p.sa>=1) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.sa.toFixed(1)} score assists/game — creates for teammates</span></div>`;
+    if(p.g>=1.5) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.g.toFixed(1)} goals/game — genuine scoring threat</span></div>`;
+    if(p.cp>=8) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.cp.toFixed(1)} contested poss/game — dominates the contest</span></div>`;
+    if(p.m>=5) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.m.toFixed(1)} marks/game — elite marking target</span></div>`;
+    if(p.r50>=4) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.r50.toFixed(1)} R50/game — shuts down forward entries</span></div>`;
+    if(p.hr>=8) dangerRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>${p.hr.toFixed(1)} handball receives — gets involved everywhere</span></div>`;
+    if(!dangerRows) dangerRows=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🔴</span><span>High-volume player — ${((p.cp||0)+(p.up||0)).toFixed(1)} possessions/game</span></div>`;
+
+    // Build "exploit" bullets
+    let exploitRows='';
+    if(p.ke_pct<55) exploitRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🟢</span><span>${p.ke_pct.toFixed(1)}% KE — turns it over regularly when pressured into kicking</span></div>`;
+    if(p.t<1.5&&(p.position||'').toLowerCase().includes('fwd')) exploitRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🟢</span><span>${(p.t||0).toFixed(1)} tackles/game — won't apply pressure when EP has the ball</span></div>`;
+    if(p.r50<1&&(p.position||'').toLowerCase().includes('def')) exploitRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🟢</span><span>${(p.r50||0).toFixed(1)} R50 — limited rebound impact when beaten</span></div>`;
+    if(p.m<3&&(p.position||'').toLowerCase().includes('def')) exploitRows+=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🟢</span><span>${(p.m||0).toFixed(1)} marks/game — aerial contests are winnable</span></div>`;
+    if(!exploitRows) exploitRows=`<div class="ci-row" style="margin:3px 0"><span class="ci-icon">🟢</span><span>Use tight run-with — limits their time and space to impact</span></div>`;
+
+    cards+=`<div class="ci-box" style="margin-bottom:14px">
+      <div class="ci-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>${p.name} <span style="font-weight:400;font-size:12px;color:var(--text-muted)">${p.position} · ${p.mt} games</span></span>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--c-red);text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px">Why they're dangerous</div>
+      ${dangerRows}
+      <div style="font-size:11px;font-weight:600;color:var(--c-green);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px">What to exploit / restrict</div>
+      ${exploitRows}
+    </div>`;
+  }
+
+  return`<div class="section-label" style="margin-top:24px">Key Players to Watch</div>${cards}`;
 }
 
 function renderScoutMatchup(){
@@ -1213,10 +1319,22 @@ function selectCoachesOpponent(name){
     <div class="radar-legend"><span><span style="color:#4a7fc1">━━</span> East Perth</span><span><span style="color:#e63946">━━</span> ${name}</span></div>
     <div class="section-label" style="margin-top:16px">Phase Matchup</div>
     <div class="split-tabs">${['total','last5','wins','losses'].map(k=>`<button class="split-tab${k===scoutMatchupSplit?' active':''}" data-scout-split="${k}" onclick="setScoutMatchupSplit('${k}')">${SPLIT_LABELS[k]}</button>`).join('')}</div>
-    <div id="scout-matchup-detail"></div>`;
+    <div id="scout-matchup-detail"></div>
+    <div id="scout-insights-players"></div>`;
 
   renderScoutRadar();
   renderScoutMatchup();
+
+  // Synthesised insights + player section
+  const insightsHTML = buildSynthesisedInsights(name);
+  siteFetch('/api/opposition/'+encodeURIComponent(name)).then(r=>r.json()).then(players=>{
+    const playerHTML = buildScoutPlayerSection(name, players||[]);
+    const el = document.getElementById('scout-insights-players');
+    if(el) el.innerHTML = insightsHTML + playerHTML;
+  }).catch(()=>{
+    const el = document.getElementById('scout-insights-players');
+    if(el) el.innerHTML = insightsHTML;
+  });
 }
 
 let compSplit='total';
