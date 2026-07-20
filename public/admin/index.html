@@ -459,7 +459,7 @@ async function uploadRounds() {
       const ok = d.results.filter(x=>x.ok).map(x=>`R${x.round}`).join(', ');
       const errs = d.results.filter(x=>x.error).map(x=>`${x.file}: ${x.error}`).join('; ');
       showMsg('roundsMsg', `Uploaded: ${ok}${errs?' | Errors: '+errs:''}`, !errs);
-      document.getElementById('roundsLoaded').textContent = `Rounds stored: ${d.rounds.map(n=>'R'+n).join(', ')}`;
+      loadRoundsStatus();
     } else {
       showMsg('roundsMsg', d.error || 'Upload failed', false);
     }
@@ -479,6 +479,27 @@ async function loadLeagueStatus() {
   content.innerHTML = `<strong>Last updated:</strong> ${updated}<br><strong>Teams loaded:</strong> ${teams.length}<br><br>` +
     teams.map(([name, t]) => `${name}: Overall ${t.overall_rating}★`).join('<br>');
   card.style.display = 'block';
+  loadRoundsStatus();
+}
+
+async function loadRoundsStatus() {
+  const el = document.getElementById('roundsLoaded');
+  el.textContent = 'Checking stored rounds…';
+  try {
+    const r = await fetch('/api/league/rounds-data', { headers:{'x-admin-token':token} });
+    const d = await r.json();
+    const rounds = d.rounds || [];
+    if (!rounds.length) {
+      el.innerHTML = '<span style="color:var(--muted)">No rounds uploaded yet.</span>';
+      return;
+    }
+    const chips = rounds.sort((a,b)=>a-b).map(n =>
+      `<span style="display:inline-block;background:var(--accent);color:#fff;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-weight:600">R${n}</span>`
+    ).join('');
+    el.innerHTML = `<strong style="font-size:12px">${rounds.length} round${rounds.length>1?'s':''} stored:</strong><br>${chips}`;
+  } catch(e) {
+    el.textContent = 'Could not load round status.';
+  }
 }
 
 // ── OPPOSITION PANEL ─────────────────────────────────────────────────────────
