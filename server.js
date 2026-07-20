@@ -462,30 +462,44 @@ function parseLeagueRoundFile(buffer, roundNum) {
     }
   }
 
-  // W/L from RAW DATA
-  // The sheet has multiple zone sections: FOR (ALL ZONES), AGAINST (ALL ZONES), FOR (FORWARD 50), etc.
-  // We only want ALL ZONES totals — so store each team's points on first occurrence only.
-  function parseWL(rows) {
-    let forPts={}, againstPts={}, section='FOR';
-    for (const r of rows) {
-      const header = r['#'];
-      if (typeof header === 'string') {
-        if (header.includes('AGAINST')) section = 'AGAINST';
-        else if (header.includes('FOR')) section = 'FOR';
-        continue;
-      }
-      const club = r['Club'] || r['Team'] || r['TEAM'];
-      if (!club || !WAFL_TEAMS.includes(club)) continue;
-      const pts = r['Points'] ?? r['Score'] ?? r['SCORE'];
-      if (pts == null) continue;
-      // Only store first occurrence per team per section (ALL ZONES comes first)
-      if (section === 'FOR' && forPts[club] == null) forPts[club] = pts;
-      else if (section === 'AGAINST' && againstPts[club] == null) againstPts[club] = pts;
+  // W/L + AGAINST stats from RAW DATA ALL ZONES section
+  const SKIP_RAW = new Set(['#','Club','Mt']);
+  const rawRows = sheet('RAW DATA');
+  let forPts={}, againstPts={}, section='FOR', doneFor=new Set(), doneAgainst=new Set();
+  for (const r of rawRows) {
+    const header = r['#'];
+    if (typeof header === 'string') {
+      if (header.includes('AGAINST')) section = 'AGAINST';
+      else if (header.includes('FOR')) section = 'FOR';
+      continue;
     }
-    return { forPts, againstPts };
+    const club = r['Club'] || r['Team'] || r['TEAM'];
+    if (!club || !WAFL_TEAMS.includes(club)) continue;
+    const pts = r['Points'] ?? r['Score'] ?? r['SCORE'];
+    if (section === 'FOR' && !doneFor.has(club)) {
+      if (pts != null) forPts[club] = pts;
+      // Store FOR raw stats (same as raw_all but sourced from RAW DATA)
+      if (teams[club]) {
+        if (!teams[club].raw_all) teams[club].raw_all = {};
+        for (const [k, v] of Object.entries(r)) {
+          if (SKIP_RAW.has(k) || v == null || typeof v !== 'number') continue;
+          if (!(k.trim() in teams[club].raw_all)) teams[club].raw_all[k.trim()] = v;
+        }
+      }
+      doneFor.add(club);
+    } else if (section === 'AGAINST' && !doneAgainst.has(club)) {
+      if (pts != null) againstPts[club] = pts;
+      // Store AGAINST raw stats
+      if (teams[club]) {
+        teams[club].raw_all_against = {};
+        for (const [k, v] of Object.entries(r)) {
+          if (SKIP_RAW.has(k) || v == null || typeof v !== 'number') continue;
+          teams[club].raw_all_against[k.trim()] = v;
+        }
+      }
+      doneAgainst.add(club);
+    }
   }
-  let { forPts, againstPts } = parseWL(sheet('RAW DATA'));
-  if (!Object.keys(forPts).length) ({ forPts, againstPts } = parseWL(bmRaw));
   for (const name of WAFL_TEAMS) {
     if (teams[name]) teams[name].won = (forPts[name]!=null&&againstPts[name]!=null) ? forPts[name]>againstPts[name] : null;
   }

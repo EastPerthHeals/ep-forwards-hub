@@ -871,8 +871,8 @@ function renderRawStats(){
   const winRnds = allRnds.filter(n=>roundsData.rounds[n]?.teams?.[team]?.won===true);
   const lossRnds = allRnds.filter(n=>roundsData.rounds[n]?.teams?.[team]?.won===false);
 
-  function avg(rnds, stat){
-    const vals=rnds.map(n=>roundsData.rounds[n]?.teams?.[team]?.raw_all?.[stat]).filter(v=>v!=null);
+  function avg(rnds, stat, field){
+    const vals=rnds.map(n=>roundsData.rounds[n]?.teams?.[team]?.[field]?.[stat]).filter(v=>v!=null);
     return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
   }
 
@@ -880,40 +880,35 @@ function renderRawStats(){
     const label = RAW_STAT_LABELS[stat]||stat;
     const lowerBetter = RAW_LOWER_IS_BETTER.has(stat)||RAW_LOWER_IS_BETTER.has(label);
 
-    const seasonVal = avg(allRnds, stat);
-    const last5Val  = avg(last5, stat);
-    const winsVal   = avg(winRnds, stat);
-    const lossesVal = avg(lossRnds, stat);
+    const forVals  = { season:avg(allRnds,stat,'raw_all'), last5:avg(last5,stat,'raw_all'), wins:avg(winRnds,stat,'raw_all'), losses:avg(lossRnds,stat,'raw_all') };
+    const oppVals  = { season:avg(allRnds,stat,'raw_all_against'), last5:avg(last5,stat,'raw_all_against'), wins:avg(winRnds,stat,'raw_all_against'), losses:avg(lossRnds,stat,'raw_all_against') };
 
-    const dp = [seasonVal,last5Val,winsVal,lossesVal].some(v=>v!=null&&v%1!==0) ? 1 : 0;
+    const allVals = Object.values({...forVals,...oppVals}).filter(v=>v!=null);
+    const dp = allVals.some(v=>v%1!==0) ? 1 : 0;
     const fmt = v => v!=null ? v.toFixed(dp) : '—';
 
-    // Wins vs losses indicator
-    let badge='';
-    if(winsVal!=null&&lossesVal!=null&&Math.abs(winsVal-lossesVal)>0.01){
-      const good = lowerBetter ? winsVal<lossesVal : winsVal>lossesVal;
-      badge = good
-        ? `<span style="font-size:10px;background:rgba(78,203,141,.15);color:#4ecb8d;border-radius:4px;padding:2px 7px;display:inline-block;margin-top:6px">Better in wins</span>`
-        : `<span style="font-size:10px;background:rgba(224,112,112,.15);color:#e07070;border-radius:4px;padding:2px 7px;display:inline-block;margin-top:6px">Worse in wins</span>`;
-    }
+    const colHeaders = `
+      <div style="display:grid;grid-template-columns:90px repeat(4,1fr);gap:6px;margin-bottom:4px">
+        <div></div>
+        ${['Season','Last 5','Wins','Losses'].map(h=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);text-align:center">${h}</div>`).join('')}
+      </div>`;
 
-    const cell = (lbl, val, color) => `
-      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;flex:1;min-width:0">
-        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">${lbl}</div>
-        <div style="font-size:20px;font-weight:700;color:${color}">${val}</div>
-        ${lbl==='Wins'&&winsVal!=null ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${winRnds.length} game${winRnds.length!==1?'s':''}</div>` : ''}
-        ${lbl==='Losses'&&lossesVal!=null ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${lossRnds.length} game${lossRnds.length!==1?'s':''}</div>` : ''}
+    const colors = ['#4a7fc1','#e8c240','#4ecb8d','#e07070'];
+    const row = (rowLabel, vals, rowColor) => `
+      <div style="display:grid;grid-template-columns:90px repeat(4,1fr);gap:6px;margin-bottom:6px;align-items:center">
+        <div style="font-size:11px;font-weight:700;color:${rowColor}">${rowLabel}</div>
+        ${[vals.season,vals.last5,vals.wins,vals.losses].map((v,i)=>`
+          <div style="background:rgba(255,255,255,0.04);border-radius:6px;padding:8px 4px;text-align:center">
+            <div style="font-size:17px;font-weight:700;color:${colors[i]}">${fmt(v)}</div>
+          </div>`).join('')}
       </div>`;
 
     return `
       <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">${label}${badge}</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${cell('Season', fmt(seasonVal), '#4a7fc1')}
-          ${cell('Last 5', fmt(last5Val), '#e8c240')}
-          ${cell('Wins', fmt(winsVal), '#4ecb8d')}
-          ${cell('Losses', fmt(lossesVal), '#e07070')}
-        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">${label}</div>
+        ${colHeaders}
+        ${row(team, forVals, 'var(--accent)')}
+        ${row('Opposition', oppVals, 'var(--text-muted)')}
       </div>`;
   }).join('');
 
@@ -1123,7 +1118,7 @@ function aggregateRounds(teamName, roundNums, roundsObj){
   function mode(k){const v=tr.map(t=>t[k]).filter(Boolean);if(!v.length)return'—';const c={};v.forEach(x=>c[x]=(c[x]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0][0];}
   function avgStats(sk){const all=tr.map(t=>t[sk]).filter(Boolean);if(!all.length)return null;const res={};for(const k of Object.keys(all[0])){const v=all.map(s=>s[k]).filter(x=>x!=null);res[k]=v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}return res;}
   const oa=avg('overall_avg');
-  return{bm_rating:avgR('bm_rating'),td_rating:avgR('td_rating'),con_rating:avgR('con_rating'),scor_rating:avgR('scor_rating'),stop_rating:avgR('stop_rating'),overall_rating:Math.round(oa),overall_avg:oa,bm_profile:mode('bm_profile'),td_profile:mode('td_profile'),con_profile:mode('con_profile'),scor_profile:mode('scor_profile'),stop_profile:mode('stop_profile'),bm_stats:avgStats('bm_stats'),td_stats:avgStats('td_stats'),con_stats:avgStats('con_stats'),scor_stats:avgStats('scor_stats'),stop_stats:avgStats('stop_stats'),raw_all:avgStats('raw_all')};
+  return{bm_rating:avgR('bm_rating'),td_rating:avgR('td_rating'),con_rating:avgR('con_rating'),scor_rating:avgR('scor_rating'),stop_rating:avgR('stop_rating'),overall_rating:Math.round(oa),overall_avg:oa,bm_profile:mode('bm_profile'),td_profile:mode('td_profile'),con_profile:mode('con_profile'),scor_profile:mode('scor_profile'),stop_profile:mode('stop_profile'),bm_stats:avgStats('bm_stats'),td_stats:avgStats('td_stats'),con_stats:avgStats('con_stats'),scor_stats:avgStats('scor_stats'),stop_stats:avgStats('stop_stats'),raw_all:avgStats('raw_all'),raw_all_against:avgStats('raw_all_against')};
 }
 
 function getSplitRoundNums(teamName, split){
