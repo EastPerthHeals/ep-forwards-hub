@@ -805,10 +805,9 @@ const RAW_LOWER_IS_BETTER = new Set(['Turnover','Free Kick Against','Inside 50 A
 let rawSelectedStats = [];
 
 function initRawStatsTab(){
-  if(!roundsData) return;
   const teamSel = document.getElementById('rawTeamSelect');
-  const teams = Object.keys(coachesData?.teams||{}).sort();
   if(teamSel.options.length<=1){
+    const teams = Object.keys(coachesData?.teams||{}).sort();
     teams.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; teamSel.appendChild(o); });
   }
 }
