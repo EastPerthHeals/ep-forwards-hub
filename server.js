@@ -489,6 +489,16 @@ function parseLeagueRoundFile(buffer, roundNum) {
   return { roundNum, teams };
 }
 
+app.post('/api/admin/debug-wl', requireAdmin, upload.single('file'), wrap(async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file' });
+  const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+  const sheetNames = wb.SheetNames;
+  const rawSheet = wb.Sheets['RAW DATA'];
+  const rawRows = rawSheet ? XLSX.utils.sheet_to_json(rawSheet, { defval: null, header: 1 }) : [];
+  // Return first 30 rows raw so we can see the structure
+  res.json({ sheetNames, rawRows: rawRows.slice(0, 30) });
+}));
+
 app.get('/api/league/rounds-data', requireSiteAccess, wrap(async (req, res) => {
   const data = await getLeagueRoundsData();
   res.json(data || {});
