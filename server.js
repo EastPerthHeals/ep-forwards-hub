@@ -448,20 +448,7 @@ function parseLeagueRoundFile(buffer, roundNum) {
     teams[r['Team']].stop_stats = { hitout_adv:r['Hitout to Advantage'], fp_per_stop:r['First Possession per Stoppage']!=null?Math.round(r['First Possession per Stoppage']*100)/100:null, clear_per_stop:r['Clearance per Stoppage']!=null?Math.round(r['Clearance per Stoppage']*100)/100:null, stop_scoring:r['Stoppage Scoring Points '], stop_against:r['Stoppage Scoring Points Against'] };
   }
 
-  // Store ALL numeric columns from all raw sheets
-  const SKIP_KEYS2 = new Set(['Team','TEAM','#','Club','Rank','Round']);
-  for (const rows of [bmRaw, tdRaw, conRaw, scorRaw, stopRaw]) {
-    for (const r of rows) {
-      const name = r['Team'] || r['TEAM'];
-      if (!teams[name]) continue;
-      if (!teams[name].raw_all) teams[name].raw_all = {};
-      for (const [k, v] of Object.entries(r)) {
-        if (SKIP_KEYS2.has(k) || v == null || typeof v !== 'number') continue;
-        teams[name].raw_all[k.trim()] = v;
-      }
-    }
-  }
-
+  // raw_all and raw_all_against come exclusively from RAW DATA sheet (correct counts)
   // W/L + AGAINST stats from RAW DATA ALL ZONES section
   const SKIP_RAW = new Set(['#','Club','Mt']);
   const rawRows = sheet('RAW DATA');
@@ -480,10 +467,10 @@ function parseLeagueRoundFile(buffer, roundNum) {
       if (pts != null) forPts[club] = pts;
       // Store FOR raw stats (same as raw_all but sourced from RAW DATA)
       if (teams[club]) {
-        if (!teams[club].raw_all) teams[club].raw_all = {};
+        teams[club].raw_all = {};
         for (const [k, v] of Object.entries(r)) {
           if (SKIP_RAW.has(k) || v == null || typeof v !== 'number') continue;
-          if (!(k.trim() in teams[club].raw_all)) teams[club].raw_all[k.trim()] = v;
+          teams[club].raw_all[k.trim()] = v;
         }
       }
       doneFor.add(club);
