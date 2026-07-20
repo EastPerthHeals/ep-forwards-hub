@@ -462,18 +462,27 @@ function parseLeagueRoundFile(buffer, roundNum) {
     }
   }
 
-  // W/L from RAW DATA
-  const rawRows = sheet('RAW DATA');
-  let forPts={}, againstPts={}, section='FOR';
-  for (const r of rawRows) {
-    const num = r['#'];
-    if (typeof num==='string' && num.includes('AGAINST')) { section='AGAINST'; continue; }
-    if (typeof num==='string') continue;
-    if (typeof num==='number' && r['Club']) {
-      if (section==='FOR') forPts[r['Club']]=r['Points'];
-      else againstPts[r['Club']]=r['Points'];
+  // W/L from RAW DATA — try RAW DATA sheet, fall back to BM_RAW_DATA
+  function parseWL(rows) {
+    let forPts={}, againstPts={}, section='FOR';
+    for (const r of rows) {
+      // Detect section header row (any cell contains 'AGAINST')
+      const vals = Object.values(r).map(v=>String(v||''));
+      if (vals.some(v=>v.includes('AGAINST'))) { section='AGAINST'; continue; }
+      // Find club name: try 'Club', 'Team', 'TEAM'
+      const club = r['Club'] || r['Team'] || r['TEAM'];
+      if (!club || !WAFL_TEAMS.includes(club)) continue;
+      // Find points: try 'Points', 'Score', 'SCORE'
+      const pts = r['Points'] ?? r['Score'] ?? r['SCORE'];
+      if (pts == null) continue;
+      if (section === 'FOR') forPts[club] = pts;
+      else againstPts[club] = pts;
     }
+    return { forPts, againstPts };
   }
+  let { forPts, againstPts } = parseWL(sheet('RAW DATA'));
+  // If no results, try BM_RAW_DATA which sometimes has FOR/AGAINST sections
+  if (!Object.keys(forPts).length) ({ forPts, againstPts } = parseWL(bmRaw));
   for (const name of WAFL_TEAMS) {
     if (teams[name]) teams[name].won = (forPts[name]!=null&&againstPts[name]!=null) ? forPts[name]>againstPts[name] : null;
   }

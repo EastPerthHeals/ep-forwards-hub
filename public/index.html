@@ -205,6 +205,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .ci-row:last-child{border-bottom:none}
 .ci-icon{font-size:15px;flex-shrink:0;margin-top:1px}
 .ci-subhead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px}
+.raw-stat-chip{background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap}
+.raw-stat-chip:hover{background:rgba(255,255,255,0.1);color:var(--text)}
+.raw-stat-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .team-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
 .team-tile{background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);font-size:12px;font-weight:600;padding:9px 16px;border-radius:8px;cursor:pointer;font-family:var(--font);transition:all .15s}
 .team-tile:hover{border-color:var(--accent);color:var(--text-primary)}
@@ -481,20 +484,19 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <div id="coaches-tab-rawstats" class="coaches-tab">
     <div class="coaches-content">
       <div class="section-label">Raw Stats Explorer</div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">Select a team and stat to compare across season average, last 5 rounds, wins and losses. Data updates each time you upload a Team Profile spreadsheet.</p>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px">
-        <div class="field" style="min-width:200px;flex:1">
-          <label>Team</label>
-          <select id="rawTeamSelect" onchange="renderRawStats()">
-            <option value="">— Select team —</option>
-          </select>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">Select a team, then pick up to 5 statistics to compare across season average, last 5 rounds, wins and losses.</p>
+      <div class="field" style="max-width:280px;margin-bottom:20px">
+        <label>Team</label>
+        <select id="rawTeamSelect" onchange="onRawTeamChange()">
+          <option value="">— Select team —</option>
+        </select>
+      </div>
+      <div id="rawStatPickerWrap" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Statistics <span id="rawStatCount" style="color:var(--text-muted);font-weight:400">(0 / 5 selected)</span></label>
+          <button onclick="clearRawStats()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:0">Clear all</button>
         </div>
-        <div class="field" style="min-width:260px;flex:2">
-          <label>Statistic</label>
-          <select id="rawStatSelect" onchange="renderRawStats()">
-            <option value="">— Select stat —</option>
-          </select>
-        </div>
+        <div id="rawStatChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px"></div>
       </div>
       <div id="rawStatsOutput"></div>
     </div>
@@ -800,132 +802,122 @@ const RAW_STAT_LABELS = {
 // Higher = better for these stats (default); lower = better for these
 const RAW_LOWER_IS_BETTER = new Set(['Turnover','Free Kick Against','Inside 50 Against','Pts Agst p In50 Agst','Stoppage Scoring Points Against','Turnovers','Rebound 50 Rate %']);
 
+let rawSelectedStats = [];
+
 function initRawStatsTab(){
   if(!roundsData) return;
   const teamSel = document.getElementById('rawTeamSelect');
-  const statSel = document.getElementById('rawStatSelect');
-  // Populate teams
-  const teams = Object.keys(coachesData?.teams||{}).filter(t=>t!=='East Perth').sort();
+  const teams = Object.keys(coachesData?.teams||{}).sort();
   if(teamSel.options.length<=1){
     teams.forEach(t=>{ const o=document.createElement('option'); o.value=t; o.textContent=t; teamSel.appendChild(o); });
   }
-  // Collect all known stat keys across all rounds
+}
+
+function onRawTeamChange(){
+  const team = document.getElementById('rawTeamSelect').value;
+  const wrap = document.getElementById('rawStatPickerWrap');
+  const chipsEl = document.getElementById('rawStatChips');
+  document.getElementById('rawStatsOutput').innerHTML='';
+  rawSelectedStats=[];
+  updateRawStatCount();
+  if(!team||!roundsData){ wrap.style.display='none'; return; }
+
+  // Collect all stat keys for this team across all rounds
   const allKeys = new Set();
   for(const rnd of Object.values(roundsData.rounds)){
-    for(const td of Object.values(rnd.teams||{})){
-      for(const k of Object.keys(td.raw_all||{})) allKeys.add(k);
-    }
+    for(const k of Object.keys(rnd.teams?.[team]?.raw_all||{})) allKeys.add(k);
   }
-  if(statSel.options.length<=1){
-    const sorted=[...allKeys].sort((a,b)=>(RAW_STAT_LABELS[a]||a).localeCompare(RAW_STAT_LABELS[b]||b));
-    sorted.forEach(k=>{ const o=document.createElement('option'); o.value=k; o.textContent=RAW_STAT_LABELS[k]||k; statSel.appendChild(o); });
+  const sorted=[...allKeys].sort((a,b)=>(RAW_STAT_LABELS[a]||a).localeCompare(RAW_STAT_LABELS[b]||b));
+  chipsEl.innerHTML = sorted.map(k=>`
+    <button class="raw-stat-chip" data-stat="${k}" onclick="toggleRawStat('${k}')">${RAW_STAT_LABELS[k]||k}</button>
+  `).join('');
+  wrap.style.display='block';
+}
+
+function toggleRawStat(key){
+  const idx = rawSelectedStats.indexOf(key);
+  if(idx>=0){
+    rawSelectedStats.splice(idx,1);
+  } else {
+    if(rawSelectedStats.length>=5) return;
+    rawSelectedStats.push(key);
   }
+  // Update chip active states
+  document.querySelectorAll('.raw-stat-chip').forEach(btn=>{
+    btn.classList.toggle('active', rawSelectedStats.includes(btn.dataset.stat));
+  });
+  updateRawStatCount();
+  renderRawStats();
+}
+
+function clearRawStats(){
+  rawSelectedStats=[];
+  document.querySelectorAll('.raw-stat-chip').forEach(btn=>btn.classList.remove('active'));
+  updateRawStatCount();
+  document.getElementById('rawStatsOutput').innerHTML='';
+}
+
+function updateRawStatCount(){
+  document.getElementById('rawStatCount').textContent=`(${rawSelectedStats.length} / 5 selected)`;
 }
 
 function renderRawStats(){
   const team = document.getElementById('rawTeamSelect').value;
-  const stat = document.getElementById('rawStatSelect').value;
   const out = document.getElementById('rawStatsOutput');
-  if(!team||!stat||!roundsData){ out.innerHTML=''; return; }
+  if(!team||!rawSelectedStats.length||!roundsData){ out.innerHTML=''; return; }
 
   const allRnds = Object.keys(roundsData.rounds).map(Number).sort((a,b)=>a-b);
   const last5 = allRnds.slice(-5);
   const winRnds = allRnds.filter(n=>roundsData.rounds[n]?.teams?.[team]?.won===true);
   const lossRnds = allRnds.filter(n=>roundsData.rounds[n]?.teams?.[team]?.won===false);
 
-  function avg(rnds){
+  function avg(rnds, stat){
     const vals=rnds.map(n=>roundsData.rounds[n]?.teams?.[team]?.raw_all?.[stat]).filter(v=>v!=null);
-    if(!vals.length) return null;
-    return vals.reduce((a,b)=>a+b,0)/vals.length;
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
   }
 
-  const splits=[
-    {label:'Season Avg', color:'#4a7fc1', n:allRnds.length, val:avg(allRnds)},
-    {label:'Last 5 Rounds', color:'#e8c240', n:last5.length, val:avg(last5)},
-    {label:'In Wins', color:'#4ecb8d', n:winRnds.length, val:avg(winRnds)},
-    {label:'In Losses', color:'#e07070', n:lossRnds.length, val:avg(lossRnds)},
-  ].filter(s=>s.val!=null);
+  const tiles = rawSelectedStats.map(stat=>{
+    const label = RAW_STAT_LABELS[stat]||stat;
+    const lowerBetter = RAW_LOWER_IS_BETTER.has(stat)||RAW_LOWER_IS_BETTER.has(label);
 
-  if(!splits.length){ out.innerHTML=`<p class="hint">No data for this stat yet — upload round files to populate.</p>`; return; }
+    const seasonVal = avg(allRnds, stat);
+    const last5Val  = avg(last5, stat);
+    const winsVal   = avg(winRnds, stat);
+    const lossesVal = avg(lossRnds, stat);
 
-  const statLabel = RAW_STAT_LABELS[stat]||stat;
-  const max = Math.max(...splits.map(s=>s.val));
-  const lowerBetter = RAW_LOWER_IS_BETTER.has(stat)||RAW_LOWER_IS_BETTER.has(statLabel);
-  const dp = splits.some(s=>s.val%1!==0) ? 1 : 0;
+    const dp = [seasonVal,last5Val,winsVal,lossesVal].some(v=>v!=null&&v%1!==0) ? 1 : 0;
+    const fmt = v => v!=null ? v.toFixed(dp) : '—';
 
-  // Bar chart rows
-  let bars='';
-  for(const s of splits){
-    const pct = max>0 ? (s.val/max*100) : 0;
-    // Colour: if lower is better, green = lower; if higher is better, green = higher
-    const winVal=splits.find(x=>x.label==='In Wins')?.val;
-    const lossVal=splits.find(x=>x.label==='In Losses')?.val;
+    // Wins vs losses indicator
     let badge='';
-    if(winVal!=null&&lossVal!=null&&Math.abs(winVal-lossVal)>0.01){
-      const winIsBetter = lowerBetter ? winVal<lossVal : winVal>lossVal;
-      if(s.label==='In Wins') badge=winIsBetter?`<span style="font-size:10px;background:rgba(78,203,141,.2);color:#4ecb8d;border-radius:4px;padding:1px 6px;margin-left:6px">✓ Better in wins</span>`:`<span style="font-size:10px;background:rgba(224,112,112,.18);color:#e07070;border-radius:4px;padding:1px 6px;margin-left:6px">✗ Worse in wins</span>`;
-      if(s.label==='In Losses') badge=!winIsBetter?`<span style="font-size:10px;background:rgba(78,203,141,.2);color:#4ecb8d;border-radius:4px;padding:1px 6px;margin-left:6px">✓ Better in losses</span>`:`<span style="font-size:10px;background:rgba(224,112,112,.18);color:#e07070;border-radius:4px;padding:1px 6px;margin-left:6px">✗ Worse in losses</span>`;
+    if(winsVal!=null&&lossesVal!=null&&Math.abs(winsVal-lossesVal)>0.01){
+      const good = lowerBetter ? winsVal<lossesVal : winsVal>lossesVal;
+      badge = good
+        ? `<span style="font-size:10px;background:rgba(78,203,141,.15);color:#4ecb8d;border-radius:4px;padding:2px 7px;display:inline-block;margin-top:6px">Better in wins</span>`
+        : `<span style="font-size:10px;background:rgba(224,112,112,.15);color:#e07070;border-radius:4px;padding:2px 7px;display:inline-block;margin-top:6px">Worse in wins</span>`;
     }
-    bars+=`<div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
-        <span style="font-size:13px;color:var(--text-secondary)">${s.label} <span style="font-size:11px;color:var(--text-muted)">(${s.n} game${s.n!==1?'s':''})</span>${badge}</span>
-        <span style="font-size:16px;font-weight:700;color:${s.color}">${s.val.toFixed(dp)}</span>
-      </div>
-      <div style="background:rgba(255,255,255,0.06);border-radius:6px;height:10px;overflow:hidden">
-        <div style="height:100%;width:${pct.toFixed(1)}%;background:${s.color};border-radius:6px;transition:width .4s"></div>
-      </div>
-    </div>`;
-  }
 
-  // Narrative
-  const winV=splits.find(s=>s.label==='In Wins')?.val;
-  const lossV=splits.find(s=>s.label==='In Losses')?.val;
-  let narrative='';
-  if(winV!=null&&lossV!=null){
-    const diff=Math.abs(winV-lossV);
-    const pctDiff=lossV>0?diff/lossV*100:0;
-    if(diff>0.01){
-      const higherInWins=winV>lossV;
-      const isGoodInWins=lowerBetter?!higherInWins:higherInWins;
-      const direction=higherInWins?'higher':'lower';
-      const note=isGoodInWins
-        ?`${team} ${direction === 'higher' ? 'produce more' : 'concede fewer'} <strong>${statLabel}</strong> in wins (${winV.toFixed(dp)} vs ${lossV.toFixed(dp)} in losses — ${pctDiff.toFixed(0)}% difference). This stat is a <strong style="color:#4ecb8d">positive indicator</strong> of their win condition.`
-        :`${team} actually record ${direction} <strong>${statLabel}</strong> in wins (${winV.toFixed(dp)} vs ${lossV.toFixed(dp)} in losses). This stat alone is not a reliable win indicator.`;
-      narrative=`<div class="ci-box" style="margin-top:18px"><div class="ci-title">What this means</div><div class="ci-row"><span class="ci-icon">${isGoodInWins?'🟢':'🟡'}</span><span>${note}</span></div></div>`;
-    }
-  }
+    const cell = (lbl, val, color) => `
+      <div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;flex:1;min-width:0">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:4px">${lbl}</div>
+        <div style="font-size:20px;font-weight:700;color:${color}">${val}</div>
+        ${lbl==='Wins'&&winsVal!=null ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${winRnds.length} game${winRnds.length!==1?'s':''}</div>` : ''}
+        ${lbl==='Losses'&&lossesVal!=null ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${lossRnds.length} game${lossRnds.length!==1?'s':''}</div>` : ''}
+      </div>`;
 
-  // Round-by-round sparkline data
-  const roundVals=allRnds.map(n=>({rnd:n,val:roundsData.rounds[n]?.teams?.[team]?.raw_all?.[stat]??null,won:roundsData.rounds[n]?.teams?.[team]?.won})).filter(x=>x.val!=null);
-  let sparkline='';
-  if(roundVals.length>1){
-    const sMax=Math.max(...roundVals.map(x=>x.val));
-    const sMin=Math.min(...roundVals.map(x=>x.val));
-    const range=sMax-sMin||1;
-    const W=500,H=70,pad=20;
-    const pts=roundVals.map((x,i)=>{
-      const px=pad+(i/(roundVals.length-1||1))*(W-pad*2);
-      const py=H-pad-(x.val-sMin)/range*(H-pad*2);
-      return{x:px,y:py,...x};
-    });
-    const polyline=pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-    const dots=pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="${p.won===true?'#4ecb8d':p.won===false?'#e07070':'#8899b4'}" stroke="var(--bg-card)" stroke-width="2"><title>Rd ${p.rnd}: ${p.val.toFixed(dp)}</title></circle>`).join('');
-    sparkline=`<div class="section-label" style="margin-top:20px">Round by Round</div>
-    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 10px 8px">
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">
-        <polyline points="${polyline}" fill="none" stroke="#4a7fc1" stroke-width="2" stroke-linejoin="round"/>
-        ${dots}
-      </svg>
-      <div style="display:flex;gap:14px;font-size:11px;color:var(--text-muted);padding:4px 8px 0">
-        <span><span style="color:#4ecb8d">●</span> Win</span>
-        <span><span style="color:#e07070">●</span> Loss</span>
-        <span><span style="color:#8899b4">●</span> Unknown</span>
-        <span style="margin-left:auto">Hover dots for round values</span>
-      </div>
-    </div>`;
-  }
+    return `
+      <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">${label}${badge}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${cell('Season', fmt(seasonVal), '#4a7fc1')}
+          ${cell('Last 5', fmt(last5Val), '#e8c240')}
+          ${cell('Wins', fmt(winsVal), '#4ecb8d')}
+          ${cell('Losses', fmt(lossesVal), '#e07070')}
+        </div>
+      </div>`;
+  }).join('');
 
-  out.innerHTML=`<div class="ci-box"><div class="ci-title">${team} — ${statLabel}</div>${bars}</div>${narrative}${sparkline}`;
+  out.innerHTML = tiles || `<p class="hint">No data — upload round files to populate.</p>`;
 }
 
 // ── COACHES LEAGUE DATA ───────────────────────────────────────────────────────
