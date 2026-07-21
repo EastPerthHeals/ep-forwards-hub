@@ -964,9 +964,9 @@ function renderRawStats(){
   }).join('');
 
   const legend = `<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);margin-bottom:14px;align-items:center;flex-wrap:wrap">
-    <span><span style="color:#4ecb8d;font-weight:700">Green</span> = 15%+ better than losses</span>
-    <span><span style="color:#e07070;font-weight:700">Red</span> = 15%+ worse than wins</span>
-    <span>White = neutral</span>
+    <span><span style="color:#4ecb8d;font-weight:700">Green chip</span> = team does this 20%+ better in wins</span>
+    <span><span style="color:#e8a040;font-weight:700">Orange chip</span> = team does this 20%+ worse in losses</span>
+    <span><span style="color:#dc5050;font-weight:700">Red chip</span> = opposition does this 20%+ more when beating this team</span>
   </div>`;
   out.innerHTML = tiles ? legend + tiles : `<p class="hint">No data — upload round files to populate.</p>`;
 }
