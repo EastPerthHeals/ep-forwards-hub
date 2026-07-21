@@ -476,12 +476,19 @@ function parseLeagueRoundFile(buffer, roundNum) {
       doneFor.add(club);
     } else if (section === 'AGAINST' && !doneAgainst.has(club)) {
       if (pts != null) againstPts[club] = pts;
-      // Store AGAINST raw stats
+      // Store AGAINST raw stats, normalising keys to match raw_all
       if (teams[club]) {
+        const forKeys = teams[club].raw_all ? Object.keys(teams[club].raw_all) : [];
         teams[club].raw_all_against = {};
         for (const [k, v] of Object.entries(r)) {
           if (SKIP_RAW.has(k) || v == null || typeof v !== 'number') continue;
-          teams[club].raw_all_against[k.trim()] = v;
+          const trimmed = k.trim();
+          // Match to existing raw_all key if it differs only by trailing 's'
+          const matched = forKeys.find(fk => fk === trimmed) ||
+                          forKeys.find(fk => fk === trimmed + 's') ||
+                          forKeys.find(fk => trimmed === fk + 's') ||
+                          trimmed;
+          teams[club].raw_all_against[matched] = v;
         }
       }
       doneAgainst.add(club);
