@@ -207,6 +207,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .ci-subhead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:6px 0 2px;border-top:1px solid rgba(255,255,255,0.06);margin-top:4px}
 .raw-stat-chip{background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text-secondary);cursor:pointer;transition:all .15s;white-space:nowrap}
 .raw-stat-chip:hover{background:rgba(255,255,255,0.1);color:var(--text)}
+.raw-stat-chip.good{background:rgba(78,203,141,0.15);border-color:rgba(78,203,141,0.5);color:#4ecb8d}
 .raw-stat-chip.warning{background:rgba(232,160,64,0.15);border-color:rgba(232,160,64,0.5);color:#e8a040}
 .raw-stat-chip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .team-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
@@ -840,15 +841,17 @@ function onRawTeamChange(){
 
   chipsEl.innerHTML = sorted.map(k=>{
     const lowerBetter = RAW_LOWER_IS_BETTER.has(k)||RAW_LOWER_IS_BETTER.has(RAW_STAT_LABELS[k]||k);
-    const oppWins  = avgField(winRnds,  k, 'raw_all_against');
-    const oppLoss  = avgField(lossRnds, k, 'raw_all_against');
-    // Orange if opposition performs 15%+ better in Claremont's losses vs wins (danger stat)
-    let warning = false;
-    if(oppWins!=null && oppLoss!=null && oppWins!==0){
-      const pct = (oppLoss - oppWins) / Math.abs(oppWins);
-      warning = lowerBetter ? pct < -0.15 : pct > 0.15;
+    const teamWins = avgField(winRnds,  k, 'raw_all');
+    const teamLoss = avgField(lossRnds, k, 'raw_all');
+    let chipClass = '';
+    if(teamWins!=null && teamLoss!=null && teamLoss!==0){
+      const pct = (teamWins - teamLoss) / Math.abs(teamLoss);
+      const better = lowerBetter ? pct < -0.15 : pct > 0.15;
+      const worse  = lowerBetter ? pct > 0.15  : pct < -0.15;
+      if(better) chipClass = ' good';
+      else if(worse) chipClass = ' warning';
     }
-    return `<button class="raw-stat-chip${warning?' warning':''}" data-stat="${k}" data-warning="${warning?'1':'0'}" onclick="toggleRawStat('${k}')">${RAW_STAT_LABELS[k]||k}</button>`;
+    return `<button class="raw-stat-chip${chipClass}" data-stat="${k}" data-chipclass="${chipClass.trim()}" onclick="toggleRawStat('${k}')">${RAW_STAT_LABELS[k]||k}</button>`;
   }).join('');
   wrap.style.display='block';
 }
@@ -861,12 +864,12 @@ function toggleRawStat(key){
     if(rawSelectedStats.length>=10) return;
     rawSelectedStats.push(key);
   }
-  // Update chip active states (preserve warning class)
+  // Update chip active states (restore original colour when deselected)
   document.querySelectorAll('.raw-stat-chip').forEach(btn=>{
     const isActive = rawSelectedStats.includes(btn.dataset.stat);
     btn.classList.toggle('active', isActive);
-    if(isActive) btn.classList.remove('warning');
-    else if(btn.dataset.warning==='1') btn.classList.add('warning');
+    btn.classList.toggle('good', !isActive && btn.dataset.chipclass==='good');
+    btn.classList.toggle('warning', !isActive && btn.dataset.chipclass==='warning');
   });
   updateRawStatCount();
   renderRawStats();
