@@ -946,10 +946,9 @@ function renderRawStats(){
   }).join('');
 
   const legend = `<div style="display:flex;gap:16px;font-size:11px;color:var(--text-muted);margin-bottom:14px;align-items:center;flex-wrap:wrap">
-    <span style="font-weight:600;color:var(--text-secondary)">Colour guide:</span>
-    <span><span style="color:#4ecb8d;font-weight:700">Green</span> = 15%+ better than the other split</span>
-    <span><span style="color:#e07070;font-weight:700">Red</span> = 15%+ worse than the other split</span>
-    <span>Compared within each row (wins vs losses)</span>
+    <span><span style="color:#4ecb8d;font-weight:700">Green</span> = 15%+ better than losses</span>
+    <span><span style="color:#e07070;font-weight:700">Red</span> = 15%+ worse than wins</span>
+    <span>White = neutral</span>
   </div>`;
   out.innerHTML = tiles ? legend + tiles : `<p class="hint">No data — upload round files to populate.</p>`;
 }
