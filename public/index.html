@@ -846,8 +846,8 @@ function onRawTeamChange(){
     let chipClass = '';
     if(teamWins!=null && teamLoss!=null && teamLoss!==0){
       const pct = (teamWins - teamLoss) / Math.abs(teamLoss);
-      const better = lowerBetter ? pct < -0.15 : pct > 0.15;
-      const worse  = lowerBetter ? pct > 0.15  : pct < -0.15;
+      const better = lowerBetter ? pct < -0.20 : pct > 0.20;
+      const worse  = lowerBetter ? pct > 0.20  : pct < -0.20;
       if(better) chipClass = ' good';
       else if(worse) chipClass = ' warning';
     }
@@ -915,8 +915,8 @@ function renderRawStats(){
     function cellColor(v, baseline) {
       if(v==null||baseline==null||baseline===0) return 'var(--text)';
       const pct = (v - baseline) / Math.abs(baseline);
-      const better = lowerBetter ? pct < -0.15 : pct > 0.15;
-      const worse  = lowerBetter ? pct > 0.15  : pct < -0.15;
+      const better = lowerBetter ? pct < -0.20 : pct > 0.20;
+      const worse  = lowerBetter ? pct > 0.20  : pct < -0.20;
       if(better) return '#4ecb8d';
       if(worse)  return '#e07070';
       return 'var(--text)';
