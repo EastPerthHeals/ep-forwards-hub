@@ -2069,7 +2069,8 @@ function renderTeamContent(i){
     +'</div></div><div class="metrics-grid">';
   const qSuffix = selectedMetricQuarter==='TOTAL' ? null : '_q'+selectedMetricQuarter.slice(1);
   metricDefs.forEach(m=>{
-    const v=qSuffix ? r[m.col+qSuffix] : r[m.col];
+    let v=qSuffix ? r[m.col+qSuffix] : r[m.col];
+    if(!qSuffix && m.col==='i50' && v!=null) v=Math.round(v/4*10)/10;
     if(v===null||v===undefined){h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:var(--text-muted)">—</div><div class="metric-target">Target: '+m.target+'</div></div>';return;}
     const c2=col(m.key,v),bc=barCol(m.key,v),p=barPct(m.key,v);
     h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:'+c2+'">'+Math.round(v*10)/10+'</div><div class="metric-target">Target: '+m.target+'</div><div class="metric-bar"><div class="metric-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';
