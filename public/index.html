@@ -164,7 +164,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 @media(max-width:600px){.two-col{grid-template-columns:1fr}}
 .season-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px}
-@media(max-width:600px){.season-summary-grid{grid-template-columns:repeat(2,1fr)}}
+.metric-avg-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:16px}
+@media(max-width:900px){.metric-avg-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.season-summary-grid{grid-template-columns:repeat(2,1fr)}.metric-avg-grid{grid-template-columns:repeat(2,1fr)}}
+.metric-tab-bar{display:flex;gap:6px;margin-bottom:10px}
+.metric-tab-btn{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);cursor:pointer;font-size:11px;letter-spacing:.5px;padding:5px 12px;text-transform:uppercase}
+.metric-tab-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
 .season-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
 .season-card-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px}
 .season-card-value{font-size:24px;font-weight:500}
@@ -408,8 +413,9 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
     <div class="cl-item"><div class="cl-dot" style="background:var(--c-red)"></div>&#8804;176 (below)</div>
   </div>
   <div class="season-summary-grid" id="seasonSummaryGrid"></div>
-  <div class="section-label" style="margin-bottom:8px;margin-top:4px">Metric averages &mdash; season to date</div>
-  <div class="season-summary-grid" id="metricAvgGrid" style="margin-bottom:16px"></div>
+  <div class="section-label" style="margin-bottom:8px;margin-top:4px">Metric averages</div>
+  <div class="metric-tab-bar" id="metricTabBar"></div>
+  <div class="metric-avg-grid" id="metricAvgGrid"></div>
   <div class="section-label" style="margin-bottom:6px">Force rating &mdash; round by round</div>
   <div class="chart-legend"><span><span class="legend-dot" style="background:#3b9e6e"></span>Win</span><span><span class="legend-dot" style="background:#b03030"></span>Loss</span><span><span class="legend-dot" style="background:rgba(180,210,255,0.5);border:1px dashed rgba(180,210,255,0.6)"></span>Target 195</span></div>
   <div class="chart-wrapper" style="height:240px"><canvas id="seasonChart"></canvas></div>
@@ -1652,12 +1658,14 @@ async function loadData(){
   return true;
 }
 
+let metricTab='season';
+function selectMetricTab(t){metricTab=t;renderSeasonSummary();}
 function renderSeasonSummary(){
   const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
   const forces=playedRounds.map(r=>r.force_avg);
   const wls=allRounds.map(r=>r.wl);
   if(!forces.length){document.getElementById('seasonSummaryGrid').innerHTML='';return;}
-  const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length*100)/100;
+  const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length);
   const best=Math.max(...forces);
   const bestRd=playedRounds[forces.indexOf(best)];
   const above=forces.filter(f=>f>=195).length;
@@ -1668,6 +1676,12 @@ function renderSeasonSummary(){
     <div class="season-card"><div class="season-card-label">Rounds above target</div><div class="season-card-value" style="color:var(--c-green)">${above}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">of ${forces.length} played</div></div>
     <div class="season-card"><div class="season-card-label">Win / Loss</div><div class="wl-row"><span class="wl-pill wl-w">W ${wins}</span><span class="wl-pill wl-l">L ${losses}</span></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">Rounds 1&ndash;${allRounds.length}</div></div>
   `;
+  const tabs=[{id:'season',label:'Season'},{id:'last5',label:'Last 5 Games'},{id:'wins',label:'Wins'},{id:'losses',label:'Losses'}];
+  document.getElementById('metricTabBar').innerHTML=tabs.map(t=>`<button type="button" class="metric-tab-btn${metricTab===t.id?' active':''}" onclick="selectMetricTab('${t.id}')">${t.label}</button>`).join('');
+  let subset=playedRounds;
+  if(metricTab==='last5') subset=playedRounds.slice(-5);
+  else if(metricTab==='wins') subset=playedRounds.filter(r=>r.wl==='W');
+  else if(metricTab==='losses') subset=playedRounds.filter(r=>r.wl==='L');
   const metricDefs2=[
     {label:'Inside 50s',col:'i50',key:'i50',target:12},
     {label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},
@@ -1677,9 +1691,9 @@ function renderSeasonSummary(){
     {label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25},
   ];
   document.getElementById('metricAvgGrid').innerHTML=metricDefs2.map(m=>{
-    const vals=playedRounds.map(r=>r[m.col]).filter(v=>v!==null&&v!==undefined);
+    const vals=subset.map(r=>r[m.col]).filter(v=>v!==null&&v!==undefined);
     const mavg=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:null;
-    return `<div class="season-card"><div class="season-card-label">${m.label}</div><div class="season-card-value" style="font-size:22px;color:${mavg!==null?col(m.key,mavg):'var(--text-muted)'}">${mavg!==null?mavg:'—'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Target: ${m.target}</div></div>`;
+    return `<div class="season-card" style="padding:12px 8px"><div class="season-card-label" style="font-size:9px">${m.label}</div><div class="season-card-value" style="font-size:20px;color:${mavg!==null?col(m.key,mavg):'var(--text-muted)'}">${mavg!==null?mavg:'—'}</div><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Target: ${m.target}</div></div>`;
   }).join('');
 }
 
