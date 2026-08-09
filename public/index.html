@@ -408,6 +408,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
     <div class="cl-item"><div class="cl-dot" style="background:var(--c-red)"></div>&#8804;176 (below)</div>
   </div>
   <div class="season-summary-grid" id="seasonSummaryGrid"></div>
+  <div class="section-label" style="margin-bottom:8px;margin-top:4px">Metric averages &mdash; season to date</div>
+  <div class="season-summary-grid" id="metricAvgGrid" style="margin-bottom:16px"></div>
   <div class="section-label" style="margin-bottom:6px">Force rating &mdash; round by round</div>
   <div class="chart-legend"><span><span class="legend-dot" style="background:#3b9e6e"></span>Win</span><span><span class="legend-dot" style="background:#b03030"></span>Loss</span><span><span class="legend-dot" style="background:rgba(180,210,255,0.5);border:1px dashed rgba(180,210,255,0.6)"></span>Target 195</span></div>
   <div class="chart-wrapper" style="height:240px"><canvas id="seasonChart"></canvas></div>
@@ -1666,6 +1668,19 @@ function renderSeasonSummary(){
     <div class="season-card"><div class="season-card-label">Rounds above target</div><div class="season-card-value" style="color:var(--c-green)">${above}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">of ${forces.length} played</div></div>
     <div class="season-card"><div class="season-card-label">Win / Loss</div><div class="wl-row"><span class="wl-pill wl-w">W ${wins}</span><span class="wl-pill wl-l">L ${losses}</span></div><div style="font-size:11px;color:var(--text-muted);margin-top:6px">Rounds 1&ndash;${allRounds.length}</div></div>
   `;
+  const metricDefs2=[
+    {label:'Inside 50s',col:'i50',key:'i50',target:12},
+    {label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},
+    {label:'% Accuracy',col:'pct_accuracy',key:'accuracy',target:60},
+    {label:'% Tackles I50',col:'pct_tackles_i50',key:'tacklesI50',target:24},
+    {label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},
+    {label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25},
+  ];
+  document.getElementById('metricAvgGrid').innerHTML=metricDefs2.map(m=>{
+    const vals=playedRounds.map(r=>r[m.col]).filter(v=>v!==null&&v!==undefined);
+    const mavg=vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10:null;
+    return `<div class="season-card"><div class="season-card-label">${m.label}</div><div class="season-card-value" style="font-size:22px;color:${mavg!==null?col(m.key,mavg):'var(--text-muted)'}">${mavg!==null?mavg:'—'}</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">Target: ${m.target}</div></div>`;
+  }).join('');
 }
 
 function renderMetricTable(){
@@ -2070,7 +2085,6 @@ function renderTeamContent(i){
   const qSuffix = selectedMetricQuarter==='TOTAL' ? null : '_q'+selectedMetricQuarter.slice(1);
   metricDefs.forEach(m=>{
     let v=qSuffix ? r[m.col+qSuffix] : r[m.col];
-    if(!qSuffix && m.col==='i50' && v!=null) v=Math.round(v/4*10)/10;
     if(v===null||v===undefined){h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:var(--text-muted)">—</div><div class="metric-target">Target: '+m.target+'</div></div>';return;}
     const c2=col(m.key,v),bc=barCol(m.key,v),p=barPct(m.key,v);
     h+='<div class="metric-card"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="color:'+c2+'">'+Math.round(v*10)/10+'</div><div class="metric-target">Target: '+m.target+'</div><div class="metric-bar"><div class="metric-fill" style="width:'+p+'%;background:'+bc+'"></div></div></div>';
