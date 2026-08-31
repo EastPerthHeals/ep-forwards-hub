@@ -515,6 +515,13 @@ app.get('/api/league/rounds-data', requireSiteAccess, wrap(async (req, res) => {
   res.json(data || {});
 }));
 
+app.delete('/api/admin/league-rounds/:num', requireAdmin, wrap(async (req, res) => {
+  const data = await getLeagueRoundsData() || { rounds: {} };
+  delete data.rounds[req.params.num];
+  await setLeagueRoundsData(data);
+  res.json({ ok: true, rounds: Object.keys(data.rounds) });
+}));
+
 app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFiles', 20), wrap(async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
   const existing = await getLeagueRoundsData() || { rounds: {} };
