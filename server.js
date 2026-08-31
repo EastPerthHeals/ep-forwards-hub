@@ -520,13 +520,16 @@ app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFil
   const existing = await getLeagueRoundsData() || { rounds: {} };
   const results = [];
   for (const file of req.files) {
-    const match = file.originalname.match(/R(\d+)/i);
-    if (!match) { results.push({ file: file.originalname, error: 'Could not detect round number from filename' }); continue; }
-    const roundNum = parseInt(match[1]);
+    const matchR = file.originalname.match(/R(\d+)/i);
+    const matchFW = file.originalname.match(/FW(\d+)/i);
+    if (!matchR && !matchFW) { results.push({ file: file.originalname, error: 'Could not detect round number from filename' }); continue; }
+    const roundNum = matchFW ? 100 + parseInt(matchFW[1]) : parseInt(matchR[1]);
+    const roundLabel = matchFW ? `FW${matchFW[1]}` : `Rd ${roundNum}`;
     try {
       const roundData = parseLeagueRoundFile(file.buffer, roundNum);
+      roundData.label = roundLabel;
       existing.rounds[roundNum] = roundData;
-      results.push({ file: file.originalname, round: roundNum, ok: true });
+      results.push({ file: file.originalname, round: roundNum, label: roundLabel, ok: true });
     } catch(e) {
       results.push({ file: file.originalname, error: e.message });
     }
