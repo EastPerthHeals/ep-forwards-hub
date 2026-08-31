@@ -524,7 +524,7 @@ app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFil
     const matchFW = file.originalname.match(/FW(\d+)/i);
     if (!matchR && !matchFW) { results.push({ file: file.originalname, error: 'Could not detect round number from filename' }); continue; }
     const roundNum = matchFW ? 100 + parseInt(matchFW[1]) : parseInt(matchR[1]);
-    const roundLabel = matchFW ? `FW${matchFW[1]}` : `Rd ${roundNum}`;
+    const roundLabel = matchFW ? `RFW${matchFW[1]}` : `Rd ${roundNum}`;
     try {
       const roundData = parseLeagueRoundFile(file.buffer, roundNum);
       roundData.label = roundLabel;
