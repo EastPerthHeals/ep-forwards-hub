@@ -456,7 +456,7 @@ async function uploadRounds() {
     const r = await fetch('/api/admin/league-rounds-upload', { method:'POST', headers:{'x-admin-token':token}, body: form });
     const d = await r.json();
     if (d.ok) {
-      const ok = d.results.filter(x=>x.ok).map(x=>`R${x.round}`).join(', ');
+      const ok = d.results.filter(x=>x.ok).map(x=>x.label||`R${x.round}`).join(', ');
       const errs = d.results.filter(x=>x.error).map(x=>`${x.file}: ${x.error}`).join('; ');
       showMsg('roundsMsg', `Uploaded: ${ok}${errs?' | Errors: '+errs:''}`, !errs);
       loadRoundsStatus();
@@ -493,9 +493,10 @@ async function loadRoundsStatus() {
       el.innerHTML = '<span style="color:var(--muted)">No rounds uploaded yet.</span>';
       return;
     }
-    const chips = rounds.map(n =>
-      `<span style="display:inline-block;background:var(--accent);color:#fff;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-weight:600">R${n}</span>`
-    ).join('');
+    const chips = rounds.map(n => {
+      const lbl = d.rounds[n]?.label || (n >= 101 ? `RFW${n-100}` : `R${n}`);
+      return `<span style="display:inline-block;background:var(--accent);color:#fff;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;font-weight:600">${lbl}</span>`;
+    }).join('');
     el.innerHTML = `<strong style="font-size:12px">${rounds.length} round${rounds.length>1?'s':''} stored:</strong><br>${chips}`;
   } catch(e) {
     el.textContent = 'Could not load round status.';
