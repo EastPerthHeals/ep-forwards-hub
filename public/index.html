@@ -1870,12 +1870,20 @@ function renderScoreSourcesAnalysis(){
   const hint = document.getElementById('scoreSourcesHint');
   if(!box||!hint) return;
 
+  const SOURCE_ALIASES = {
+    'Front and Centre': 'Front & Centre',
+    'F50 Stop': 'F50 Stop (Incl. Free Kicks)',
+    'Surge HBR': 'Surge (HBR)',
+    'Fwd Half Intercept': 'Forward 1/2 Intercept',
+    'CBD (BM)': 'CBD',
+  };
   const totals = {};
   let grandTotal = 0;
   allRounds.forEach(r=>{
     if(!r.score_sources) return;
     r.score_sources.forEach(([name,count])=>{
-      totals[name] = (totals[name]||0) + count;
+      const canonical = SOURCE_ALIASES[name] || name;
+      totals[canonical] = (totals[canonical]||0) + count;
       grandTotal += count;
     });
   });
@@ -2105,7 +2113,7 @@ function renderTeamContent(i){
   });
   h+='</div><div class="two-col">';
   let left='<div>';
-  if(r.score_sources&&r.score_sources.length){left+='<div class="section-label" style="margin-bottom:10px">Score sources</div><div class="score-sources">'+r.score_sources.map(([n,c])=>'<div class="source-row"><span class="source-name">'+n+'</span><span class="source-count">'+c+'</span></div>').join('')+'</div>';}
+  if(r.score_sources&&r.score_sources.length){const srcAliases={'Front and Centre':'Front & Centre','F50 Stop':'F50 Stop (Incl. Free Kicks)','Surge HBR':'Surge (HBR)','Fwd Half Intercept':'Forward 1/2 Intercept','CBD (BM)':'CBD'};left+='<div class="section-label" style="margin-bottom:10px">Score sources</div><div class="score-sources">'+r.score_sources.map(([n,c])=>'<div class="source-row"><span class="source-name">'+(srcAliases[n]||n)+'</span><span class="source-count">'+c+'</span></div>').join('')+'</div>';}
   if(r.intercept_fwds!==null&&r.intercept_fwds!==undefined)left+='<div class="section-label" style="margin-bottom:10px;margin-top:16px;color:#6b9fd4">Intercept goals</div><div class="notes-box" style="border-color:#4a7fc1">Fwds: <strong>'+r.intercept_fwds+'</strong> &middot; Backs: <strong>'+r.intercept_backs+'</strong> &middot; Mids: <strong>'+r.intercept_mids+'</strong></div>';
   left+='</div>';
   let notes='<div>';
