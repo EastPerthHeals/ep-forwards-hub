@@ -576,4 +576,36 @@ app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFil
   res.json({ ok: true, results, rounds: Object.keys(existing.rounds).sort((a,b)=>a-b) });
 }));
 
-app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));
+async function runMigration() {
+  try {
+    const { MongoClient } = require('mongodb');
+    if (!process.env.MONGO_URI) return;
+    const client = new MongoClient(process.env.MONGO_URI);
+    await client.connect();
+    const db = client.db(process.env.MONGO_DB_NAME || 'ep_forwards_hub');
+    const filter = { season: { $exists: false } };
+    const update = { $set: { season: 2026 } };
+    const r1 = await db.collection('rounds').updateMany(filter, update);
+    const r2 = await db.collection('opposition').updateMany(filter, update);
+    const r3 = await db.collection('opposition_notes').updateMany(filter, update);
+    const r4 = await db.collection('round_notes').updateMany(filter, update);
+    const vis = await db.collection('settings').findOne({ _id: 'analysisVisibility' });
+    if (vis && vis.visible) {
+      await db.collection('settings').updateOne(
+        { _id: 'analysisVisibility_2026' },
+        { $setOnInsert: { visible: vis.visible } },
+        { upsert: true }
+      );
+    }
+    await client.close();
+    const total = r1.modifiedCount + r2.modifiedCount + r3.modifiedCount + r4.modifiedCount;
+    if (total > 0) console.log(`Season migration: tagged ${total} documents with season:2026`);
+  } catch (e) {
+    console.error('Season migration error:', e.message);
+  }
+}
+
+app.listen(PORT, async () => {
+  console.log(`EP Forwards Hub running on http://localhost:${PORT}`);
+  await runMigration();
+});
