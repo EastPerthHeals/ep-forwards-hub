@@ -1930,53 +1930,80 @@ function renderMidRoundContent(idx, rounds){
   const wlBg = r.wl==='W' ? 'rgba(59,158,110,0.2)' : 'rgba(192,57,43,0.2)';
   const signFmt = v => (v>0?'+':'')+v;
   const cellCol = v => v>0?'#4ecb8d':v<0?'#e07070':'var(--text-muted)';
+  const mfrCol = r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)';
 
-  // Header: MFR score
-  let h = `<div class="force-total"><div>
-    <div class="force-label">Midfield Force Rating — ${r.short} <span style="font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;background:${wlBg};color:${wlCol}">${r.wl==='W'?'WIN':'LOSS'}</span></div>
-    <div class="force-score" style="color:${r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)'}">${r.mfr>0?'+':''}${r.mfr}</div>
-    <div class="force-target">Benchmark: +12 (top-3 avg)</div>
-  </div></div>`;
-
-  // Radar + legend
-  h += `<div class="section-label" style="margin-bottom:8px">EP vs Opposition — Web Graph</div>`;
-  h += `<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg-card2);border-radius:14px;padding:16px 8px 10px;margin-bottom:4px">`;
-  h += buildMidRadarSVG(r);
-  h += `</div>`;
-  h += `<div style="display:flex;gap:20px;justify-content:center;background:var(--bg-card2);border-radius:0 0 14px 14px;padding:8px 12px 12px;font-size:11px;color:var(--text-muted);margin-bottom:16px">
-    <span><span style="color:#4a7fc1">━━</span> East Perth</span>
-    <span><span style="color:#c0392b">╌╌</span> Opposition</span>
-    <span style="color:var(--text-muted)">Values shown: EP / Opp</span>
+  // ── ANALYST DASHBOARD LAYOUT ──
+  // Header row: MFR badge + round info
+  let h = `<div style="display:flex;align-items:center;gap:18px;padding:18px 20px 16px;background:var(--bg-card);border-radius:14px 14px 0 0;border-bottom:1px solid var(--border-col);margin-bottom:0">
+    <div style="background:var(--accent);border-radius:12px;padding:12px 20px;text-align:center;min-width:100px;flex-shrink:0">
+      <div style="font-size:2rem;font-weight:900;line-height:1;color:#fff">${r.mfr>0?'+':''}${r.mfr}</div>
+      <div style="font-size:9px;letter-spacing:0.09em;opacity:0.85;color:#fff;margin-top:3px">MFR RATING</div>
+    </div>
+    <div style="min-width:0">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+        ${r.short} — Midfielders
+        <span style="font-size:11px;padding:2px 10px;border-radius:10px;margin-left:8px;background:${wlBg};color:${wlCol};font-weight:700">${r.wl==='W'?'WIN':'LOSS'}</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">Midfield Force Rating · 2026 Season</div>
+      <div style="font-size:0.8rem;margin-top:6px">
+        <span style="color:var(--text-muted)">Top-3 benchmark: <strong style="color:var(--text-muted)">+12</strong></span>
+        &nbsp;·&nbsp;
+        <span style="color:${mfrCol};font-weight:700">${r.mfr>=12?'✓ Above target':'✗ Below target'}</span>
+      </div>
+    </div>
   </div>`;
 
-  // 6 stat tiles — EP vs Opp, diff, and weighting note where applicable
-  h += `<div class="section-label" style="margin-bottom:12px">Midfield Stats — EP vs Opposition</div>`;
-  h += `<div class="metrics-grid">`;
-  MID_RADAR_STATS.forEach(s => {
-    const ep = r[s.key+'_ep'] ?? '—';
-    const opp = r[s.key+'_opp'] ?? '—';
-    const diff = (ep !== '—' && opp !== '—') ? ep - opp : null;
-    let subLine = `Opp: ${opp}`;
-    if(diff !== null){
-      subLine += ` &nbsp; Diff: <span style="color:${cellCol(diff)}">${signFmt(diff)}</span>`;
-      if(s.weight){
-        const contrib = diff * s.weight;
-        subLine += ` &nbsp; <span style="font-size:9px;color:var(--text-muted)">(×${s.weight} = <span style="color:${cellCol(contrib)}">${signFmt(contrib)}</span> MFR)</span>`;
-      } else if(s.div){
-        const contrib = Math.round(diff/s.div*10)/10;
-        subLine += ` &nbsp; <span style="font-size:9px;color:var(--text-muted)">(÷${s.div} = <span style="color:${cellCol(contrib)}">${signFmt(contrib)}</span> MFR)</span>`;
-      }
-    }
-    h += `<div class="metric-card">
-      <div class="metric-label">${s.label}</div>
-      <div class="metric-value" style="color:${diff!==null?cellCol(diff):'var(--text-muted)'}">${ep}</div>
-      <div class="metric-target">${subLine}</div>
-    </div>`;
-  });
+  // Two-column body: radar left, bars right
+  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--bg-card);border-radius:0 0 14px 14px;border-top:none;overflow:hidden;margin-bottom:18px">`;
+
+  // LEFT: radar
+  h += `<div style="padding:16px 12px 16px 16px;border-right:1px solid var(--border-col)">`;
+  h += `<div style="font-size:10px;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:10px">RADAR · EP vs OPP</div>`;
+  h += buildMidRadarSVG(r);
+  h += `<div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text-muted)">
+    <span><span style="color:#4a7fc1">━━</span> East Perth</span>
+    <span><span style="color:#c0392b">╌╌</span> Opposition</span>
+  </div>`;
   h += `</div>`;
 
+  // RIGHT: horizontal bars
+  h += `<div style="padding:16px 16px 16px 14px">`;
+  h += `<div style="font-size:10px;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:12px">STATS HEAD-TO-HEAD</div>`;
+  MID_RADAR_STATS.forEach(s => {
+    const ep = r[s.key+'_ep'] ?? null;
+    const opp = r[s.key+'_opp'] ?? null;
+    const max = MID_RADAR_MAX[s.key];
+    const epPct = ep!=null ? Math.round(Math.min(ep/max,1)*100) : 0;
+    const oppPct = opp!=null ? Math.round(Math.min(opp/max,1)*100) : 0;
+    const diff = (ep!=null && opp!=null) ? ep-opp : null;
+    let weightNote = '';
+    if(diff!==null && s.weight){ weightNote=` <span style="font-size:9px;color:var(--text-muted)">(×${s.weight})</span>`; }
+    else if(diff!==null && s.div){ weightNote=` <span style="font-size:9px;color:var(--text-muted)">(÷${s.div})</span>`; }
+    h += `<div style="margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <span style="font-size:0.78rem;font-weight:700;color:var(--text-main)">${s.label}${weightNote}</span>
+        <span style="font-size:0.8rem;font-weight:700;color:${diff!==null?cellCol(diff):'var(--text-muted)'}">${diff!==null?signFmt(diff):'—'}</span>
+      </div>
+      <div style="background:var(--border-col);border-radius:999px;height:7px;overflow:hidden">
+        <div style="width:${epPct}%;height:100%;background:#4a7fc1;border-radius:999px"></div>
+      </div>
+      <div style="background:var(--border-col);border-radius:999px;height:7px;overflow:hidden;margin-top:3px">
+        <div style="width:${oppPct}%;height:100%;background:#c0392b;border-radius:999px"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:2px">
+        <span style="color:#4a7fc1">${ep??'—'}</span>
+        <span style="color:#c0392b">${opp??'—'}</span>
+      </div>
+    </div>`;
+  });
+  h += `<div style="margin-top:8px;padding:9px 11px;background:var(--bg-card2);border-radius:8px;font-size:0.78rem;color:var(--text-muted)">
+    <strong style="color:var(--text-main)">MFR =</strong> CB + (Clr ×2) + I50 + (SI ÷3)
+  </div>`;
+  h += `</div>`; // end right col
+  h += `</div>`; // end grid
+
   // Notes
-  h += `<div class="section-label" style="margin-bottom:10px;margin-top:20px">Round Notes — ${r.short}</div>`
+  h += `<div class="section-label" style="margin-bottom:10px;margin-top:4px">Round Notes — ${r.short}</div>`
     + `<div class="notes-box" style="border-color:var(--accent)">`
     +   `<div class="opp-notes-list" id="midRoundNotesList"><p class="hint" style="margin:0">Loading...</p></div>`
     +   `<div class="opp-note-form">`
