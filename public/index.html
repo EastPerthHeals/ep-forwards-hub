@@ -1782,6 +1782,10 @@ function renderMetricTable(){
 }
 
 function renderSeasonCharts(){
+  if(!allRounds.length){
+    ['seasonChart','kpiChart','wlChart'].forEach(id=>{const el=document.getElementById(id);if(el){const ex=Chart.getChart(el);if(ex)ex.destroy();}});
+    return;
+  }
   const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
   const forces=playedRounds.map(r=>r.force_avg);
   const labels=playedRounds.map(r=>r.short);
@@ -1806,7 +1810,8 @@ function renderSeasonCharts(){
 function renderTeamRounds(){
   const lastIdx = allRounds.length-1;
   document.getElementById('teamRoundTabs').innerHTML=allRounds.map((r,i)=>'<button class="round-tab '+(i===lastIdx?'active':'')+'" onclick="selectRound('+i+',this)">'+r.short+'</button>').join('');
-  if(allRounds.length)renderTeamContent(lastIdx);
+  if(allRounds.length) renderTeamContent(lastIdx);
+  else document.getElementById('teamContent').innerHTML='<p class="hint" style="margin-top:24px">No round data for this season yet.</p>';
 }
 function selectRound(i,b){document.querySelectorAll('.round-tab').forEach(t=>t.classList.remove('active'));b.classList.add('active');renderTeamContent(i);}
 
