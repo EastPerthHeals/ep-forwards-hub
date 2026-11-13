@@ -360,7 +360,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 <div class="header">
   <img src="/logo.png" alt="East Perth FC" style="height:42px;width:auto;"/>
   <div><span class="header-title">East Perth League Hub</span><span class="header-sub" id="headerSeasonLabel">2027</span></div>
-  <a href="/admin/" class="header-admin" style="margin-left:auto">Admin</a>
+  <button onclick="switchSeason()" style="margin-left:auto;margin-right:12px;background:none;border:1px solid #2d3a52;color:#8899bb;border-radius:6px;padding:5px 10px;font-size:.75rem;cursor:pointer" title="Switch season">⇄ Switch</button>
+  <a href="/admin/" class="header-admin">Admin</a>
 </div>
 <div class="toptabs" id="superTabs">
   <button class="toptab-btn active" onclick="showSuperTab('Players',this)">Players</button>
@@ -599,6 +600,12 @@ function chooseSeason(season){
   hideSeasonPicker();
   document.getElementById('headerSeasonLabel').textContent = season === 2026 ? '2026 Archive' : '2027';
   boot();
+}
+
+function switchSeason(){
+  activeSeason = 0;
+  sessionStorage.removeItem(SEASON_KEY);
+  showSeasonPicker();
 }
 
 async function trySiteLogin(){
