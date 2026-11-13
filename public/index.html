@@ -1700,6 +1700,8 @@ function renderCoachesComp(){renderCompContent();}
 let allRounds=[];
 let seasonChart=null, wlChart=null, kpiChart=null;
 
+let _loadSeq = 0;
+
 function clearPlayersContent(){
   document.getElementById('seasonSummaryGrid').innerHTML='';
   document.getElementById('metricTabBar').innerHTML='';
@@ -1715,12 +1717,14 @@ function clearPlayersContent(){
 }
 
 async function loadData(){
+  const seq = ++_loadSeq;
   clearPlayersContent();
   let visSettings;
   [allRounds, visSettings] = await Promise.all([
     siteFetch('/api/rounds').then(r=>r.json()),
     siteFetch('/api/analysis-settings').then(r=>r.json()).catch(()=>({visible:[]}))
   ]);
+  if(seq !== _loadSeq) return; // a newer load started, discard this one
   analysisVisibleKeys = (visSettings && Array.isArray(visSettings.visible)) ? visSettings.visible : [];
   renderGD();
   renderSeasonSummary();
@@ -1737,7 +1741,12 @@ function renderSeasonSummary(){
   const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
   const forces=playedRounds.map(r=>r.force_avg);
   const wls=allRounds.map(r=>r.wl);
-  if(!forces.length){document.getElementById('seasonSummaryGrid').innerHTML='';return;}
+  if(!forces.length){
+    document.getElementById('seasonSummaryGrid').innerHTML='';
+    document.getElementById('metricTabBar').innerHTML='';
+    document.getElementById('metricAvgGrid').innerHTML='';
+    return;
+  }
   const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length);
   const best=Math.max(...forces);
   const bestRd=playedRounds[forces.indexOf(best)];
@@ -1771,6 +1780,9 @@ function renderSeasonSummary(){
 }
 
 function renderMetricTable(){
+  const head=document.getElementById('metricTableHead');
+  const body=document.getElementById('metricTableBody');
+  if(!allRounds.length){ if(head) head.innerHTML=''; if(body) body.innerHTML=''; return; }
   const metricKeys=[
     {label:'Inside 50s',col:'i50',key:'i50',target:12},
     {label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},
@@ -1779,8 +1791,6 @@ function renderMetricTable(){
     {label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},
     {label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25},
   ];
-  const head=document.getElementById('metricTableHead');
-  const body=document.getElementById('metricTableBody');
   head.innerHTML='<tr><th>Metric</th><th>Target</th>'+allRounds.map(r=>'<th>'+r.short+'</th>').join('')+'<th>Season avg</th></tr>';
   let h='';
   metricKeys.forEach(m=>{
