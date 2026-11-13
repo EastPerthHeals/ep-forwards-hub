@@ -1874,7 +1874,7 @@ function renderMidRounds(){
   const mfrRounds = allRounds.filter(r => r.mid_cbfp_ep !== undefined && r.mid_cbfp_ep !== null);
   if(!mfrRounds.length){ document.getElementById('midTeamContent').innerHTML='<p class="hint" style="padding:20px">No midfield data loaded yet.</p>'; return; }
   const lastIdx = mfrRounds.length - 1;
-  document.getElementById('midRoundTabs').innerHTML = mfrRounds.map((r,i)=>`<button class="round-tab${i===lastIdx?' active':''}" onclick="selectMidRound(${i},this)">${r.short}</button>`).join('');
+  document.getElementById('midRoundTabs').innerHTML = mfrRounds.map((r,i)=>`<button class="round-tab${i===lastIdx?' active':''}" onclick="selectMidRound(${i},this)" style="display:flex;flex-direction:column;align-items:center;line-height:1.2;padding:7px 10px"><span>${r.short}</span>${r.opponent?`<span style="font-size:9px;opacity:0.7;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis">${r.opponent.replace('East Fremantle','E.Frem').replace('South Fremantle','S.Frem').replace('Swan Districts','Swan Dst').replace('West Coast Eagles','WCE').replace('Peel Thunder','Peel').replace('West Perth','W.Perth')}</span>`:''}</button>`).join('');
   renderMidRoundContent(lastIdx, mfrRounds);
 }
 
@@ -1974,7 +1974,8 @@ function renderMidRoundContent(idx, rounds){
         ${r.short} — Midfielders
         <span style="font-size:12px;padding:3px 12px;border-radius:999px;margin-left:10px;background:${wlBg};color:${wlCol};font-weight:700;vertical-align:middle">${r.wl==='W'?'WIN':'LOSS'}</span>
       </div>
-      <div style="font-size:0.9rem;color:${SUBTEXT};margin-top:5px">Midfield Force Rating · 2026 Season</div>
+      ${r.opponent?`<div style="font-size:1rem;color:#003087;font-weight:700;margin-top:5px">vs ${r.opponent}</div>`:''}
+      <div style="font-size:0.9rem;color:${SUBTEXT};margin-top:3px">Midfield Force Rating · 2026 Season</div>
       <div style="font-size:0.9rem;margin-top:7px">
         <span style="color:${SUBTEXT}">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></span>
         &nbsp;·&nbsp;
