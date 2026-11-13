@@ -118,6 +118,13 @@ function parseLeagueExcel(buffer) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const ACTIVE_SEASON = 2027;
+
+function parseSeason(req) {
+  const s = parseInt(req.query.season);
+  return isNaN(s) ? ACTIVE_SEASON : s;
+}
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -184,12 +191,14 @@ function wrap(fn) {
 // ── PUBLIC API ──────────────────────────────────────────────────────────────
 
 app.get('/api/rounds', requireSiteAccess, wrap(async (req, res) => {
-  const data = await load();
+  const season = parseSeason(req);
+  const data = await load(season);
   res.json(data.rounds.sort((a, b) => a.round_num - b.round_num));
 }));
 
 app.get('/api/rounds/:num', requireSiteAccess, wrap(async (req, res) => {
-  const data = await load();
+  const season = parseSeason(req);
+  const data = await load(season);
   const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
   if (!round) return res.status(404).json({ error: 'Not found' });
   res.json(round);
@@ -201,20 +210,23 @@ app.get('/api/analysis-settings', requireSiteAccess, wrap(async (req, res) => {
 }));
 
 app.get('/api/opposition/:team', requireSiteAccess, wrap(async (req, res) => {
-  const players = await getOppositionTeam(req.params.team);
+  const season = parseSeason(req);
+  const players = await getOppositionTeam(req.params.team, season);
   res.json(players);
 }));
 
 app.get('/api/opposition-notes/:team', requireSiteAccess, wrap(async (req, res) => {
-  const notes = await getOppositionNotes(req.params.team);
+  const season = parseSeason(req);
+  const notes = await getOppositionNotes(req.params.team, season);
   res.json(notes);
 }));
 
 app.post('/api/opposition-notes/:team/:player', requireSiteAccess, wrap(async (req, res) => {
+  const season = parseSeason(req);
   const author = ((req.body && req.body.author) || '').trim();
   const note = ((req.body && req.body.note) || '').trim();
   if (!note) return res.status(400).json({ error: 'Note text is required' });
-  const doc = await addOppositionNote(req.params.team, req.params.player, author || 'Anonymous', note);
+  const doc = await addOppositionNote(req.params.team, req.params.player, author || 'Anonymous', note, season);
   res.json(doc);
 }));
 
@@ -224,15 +236,17 @@ app.delete('/api/opposition-notes/:id', requireSiteAccess, wrap(async (req, res)
 }));
 
 app.get('/api/round-notes/:num', requireSiteAccess, wrap(async (req, res) => {
-  const notes = await getRoundNotes(parseInt(req.params.num));
+  const season = parseSeason(req);
+  const notes = await getRoundNotes(parseInt(req.params.num), season);
   res.json(notes);
 }));
 
 app.post('/api/round-notes/:num', requireSiteAccess, wrap(async (req, res) => {
+  const season = parseSeason(req);
   const author = ((req.body && req.body.author) || '').trim();
   const note = ((req.body && req.body.note) || '').trim();
   if (!note) return res.status(400).json({ error: 'Note text is required' });
-  const doc = await addRoundNote(parseInt(req.params.num), author || 'Anonymous', note);
+  const doc = await addRoundNote(parseInt(req.params.num), author || 'Anonymous', note, season);
   res.json(doc);
 }));
 
@@ -272,7 +286,8 @@ app.post('/api/gameday/reset', requireSiteAccess, (req, res) => {
 // ── ADMIN API ───────────────────────────────────────────────────────────────
 
 app.post('/api/admin/rounds', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
+  const season = parseSeason(req);
+  const data = await load(season);
   const d = req.body;
   const idx = data.rounds.findIndex(r => r.round_num === d.round_num);
   const round = {
@@ -307,23 +322,25 @@ app.post('/api/admin/rounds', requireAdmin, wrap(async (req, res) => {
   };
   if (idx >= 0) data.rounds[idx] = round;
   else data.rounds.push(round);
-  await save(data);
+  await save(data, season);
   res.json({ ok: true });
 }));
 
 app.patch('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
+  const season = parseSeason(req);
+  const data = await load(season);
   const round = data.rounds.find(r => r.round_num === parseInt(req.params.num));
   if (!round) return res.status(404).json({ error: 'Round not found' });
   Object.assign(round, req.body);
-  await save(data);
+  await save(data, season);
   res.json({ ok: true });
 }));
 
 app.delete('/api/admin/rounds/:num', requireAdmin, wrap(async (req, res) => {
-  const data = await load();
+  const season = parseSeason(req);
+  const data = await load(season);
   data.rounds = data.rounds.filter(r => r.round_num !== parseInt(req.params.num));
-  await save(data);
+  await save(data, season);
   res.json({ ok: true });
 }));
 
@@ -375,32 +392,37 @@ app.post('/api/admin/analysis-settings', requireAdmin, wrap(async (req, res) => 
 }));
 
 app.get('/api/admin/opposition', requireAdmin, wrap(async (req, res) => {
-  const all = await getAllOpposition();
+  const season = parseSeason(req);
+  const all = await getAllOpposition(season);
   res.json(all);
 }));
 
 app.get('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
-  const players = await getOppositionTeam(req.params.team);
+  const season = parseSeason(req);
+  const players = await getOppositionTeam(req.params.team, season);
   res.json(players);
 }));
 
 app.post('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
+  const season = parseSeason(req);
   const players = (req.body && req.body.players) || [];
-  await setOppositionTeam(req.params.team, players);
+  await setOppositionTeam(req.params.team, players, season);
   res.json({ ok: true });
 }));
 
 // ── LEAGUE ANALYSIS API ──────────────────────────────────────────────────────
 
 app.get('/api/league/data', requireSiteAccess, wrap(async (req, res) => {
-  const data = await getLeagueData();
+  const season = parseSeason(req);
+  const data = await getLeagueData(season);
   res.json(data || {});
 }));
 
 app.post('/api/admin/league-upload', requireAdmin, upload.single('file'), wrap(async (req, res) => {
+  const season = parseSeason(req);
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   const data = parseLeagueExcel(req.file.buffer);
-  await setLeagueData(data);
+  await setLeagueData(data, season);
   res.json({ ok: true, teams: Object.keys(data.teams) });
 }));
 
@@ -511,20 +533,23 @@ app.post('/api/admin/debug-wl', requireAdmin, upload.single('file'), wrap(async 
 }));
 
 app.get('/api/league/rounds-data', requireSiteAccess, wrap(async (req, res) => {
-  const data = await getLeagueRoundsData();
+  const season = parseSeason(req);
+  const data = await getLeagueRoundsData(season);
   res.json(data || {});
 }));
 
 app.delete('/api/admin/league-rounds/:num', requireAdmin, wrap(async (req, res) => {
-  const data = await getLeagueRoundsData() || { rounds: {} };
+  const season = parseSeason(req);
+  const data = await getLeagueRoundsData(season) || { rounds: {} };
   delete data.rounds[req.params.num];
-  await setLeagueRoundsData(data);
+  await setLeagueRoundsData(data, season);
   res.json({ ok: true, rounds: Object.keys(data.rounds) });
 }));
 
 app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFiles', 20), wrap(async (req, res) => {
+  const season = parseSeason(req);
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
-  const existing = await getLeagueRoundsData() || { rounds: {} };
+  const existing = await getLeagueRoundsData(season) || { rounds: {} };
   const results = [];
   for (const file of req.files) {
     const matchR = file.originalname.match(/R(\d+)/i);
@@ -543,8 +568,44 @@ app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFil
       results.push({ file: file.originalname, error: e.message });
     }
   }
-  await setLeagueRoundsData(existing);
+  await setLeagueRoundsData(existing, season);
   res.json({ ok: true, results, rounds: Object.keys(existing.rounds).sort((a,b)=>a-b) });
 }));
 
-app.listen(PORT, () => console.log(`EP Forwards Hub running on http://localhost:${PORT}`));
+async function runMigration() {
+  try {
+    const { MongoClient } = require('mongodb');
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) return;
+    const dbName = process.env.MONGO_DB_NAME || 'ep_forwards_hub';
+    const client = new MongoClient(mongoUri);
+    await client.connect();
+    const database = client.db(dbName);
+    const filter = { season: { $exists: false } };
+    const update = { $set: { season: 2026 } };
+    const r1 = await database.collection('rounds').updateMany(filter, update);
+    const r2 = await database.collection('opposition').updateMany(filter, update);
+    const r3 = await database.collection('opposition_notes').updateMany(filter, update);
+    const r4 = await database.collection('round_notes').updateMany(filter, update);
+    console.log(`Migration: tagged rounds=${r1.modifiedCount}, opposition=${r2.modifiedCount}, opp_notes=${r3.modifiedCount}, round_notes=${r4.modifiedCount} with season:2026`);
+    // Copy league docs to season-keyed versions
+    const leagueData = await database.collection('league').findOne({ _id: 'data' });
+    if (leagueData) {
+      await database.collection('league').updateOne({ _id: 'data_2026' }, { $setOnInsert: { data: leagueData.data, updated_at: leagueData.updated_at } }, { upsert: true });
+      console.log('Migration: copied league data -> data_2026');
+    }
+    const leagueRounds = await database.collection('league').findOne({ _id: 'rounds' });
+    if (leagueRounds) {
+      await database.collection('league').updateOne({ _id: 'rounds_2026' }, { $setOnInsert: { data: leagueRounds.data, updated_at: leagueRounds.updated_at } }, { upsert: true });
+      console.log('Migration: copied league rounds -> rounds_2026');
+    }
+    await client.close();
+  } catch (err) {
+    console.error('Migration error (non-fatal):', err.message);
+  }
+}
+
+app.listen(PORT, async () => {
+  console.log(`EP Forwards Hub running on http://localhost:${PORT}`);
+  await runMigration();
+});

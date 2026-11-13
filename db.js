@@ -13,10 +13,10 @@ async function connect() {
   await client.connect();
   db = client.db(DB_NAME);
 
-  // seed if empty (first-ever run)
+  // seed if empty (first-ever run) — seed data is tagged season:2026
   const roundsCount = await db.collection('rounds').countDocuments();
   if (roundsCount === 0) {
-    await db.collection('rounds').insertMany(SEED.rounds);
+    await db.collection('rounds').insertMany(SEED.rounds.map(r => ({ ...r, season: 2026 })));
   }
   return db;
 }
@@ -34,17 +34,19 @@ const SEED = {
   ]
 };
 
-async function load() {
+async function load(season) {
   const database = await connect();
-  const rounds = await database.collection('rounds').find({}, { projection: { _id: 0 } }).toArray();
+  const query = season ? { season } : {};
+  const rounds = await database.collection('rounds').find(query, { projection: { _id: 0 } }).toArray();
   return { rounds };
 }
 
-async function save(data) {
+async function save(data, season) {
+  if (!season) throw new Error('season required for save');
   const database = await connect();
-  await database.collection('rounds').deleteMany({});
+  await database.collection('rounds').deleteMany({ season });
   if (data.rounds && data.rounds.length) {
-    await database.collection('rounds').insertMany(data.rounds.map(r => ({ ...r })));
+    await database.collection('rounds').insertMany(data.rounds.map(r => ({ ...r, season })));
   }
 }
 
@@ -148,43 +150,47 @@ async function setAnalysisVisible(keys) {
 
 // ── OPPOSITION SCOUTING ──────────────────────────────────────────────────────
 
-async function getOppositionTeam(team) {
+async function getOppositionTeam(team, season) {
   const database = await connect();
+  const query = season ? { team, season } : { team };
   return database.collection('opposition')
-    .find({ team }, { projection: { _id: 0 } })
+    .find(query, { projection: { _id: 0 } })
     .toArray();
 }
 
-async function getAllOpposition() {
+async function getAllOpposition(season) {
   const database = await connect();
+  const query = season ? { season } : {};
   return database.collection('opposition')
-    .find({}, { projection: { _id: 0 } })
+    .find(query, { projection: { _id: 0 } })
     .toArray();
 }
 
 // Replaces the full defender list for one team — matches the weekly "upload latest PDF" workflow
-async function setOppositionTeam(team, players) {
+async function setOppositionTeam(team, players, season) {
+  if (!season) throw new Error('season required for setOppositionTeam');
   const database = await connect();
-  await database.collection('opposition').deleteMany({ team });
+  await database.collection('opposition').deleteMany({ team, season });
   if (Array.isArray(players) && players.length) {
-    await database.collection('opposition').insertMany(players.map(p => ({ ...p, team })));
+    await database.collection('opposition').insertMany(players.map(p => ({ ...p, team, season })));
   }
 }
 
 // ── OPPOSITION PLAYER NOTES ──────────────────────────────────────────────────
 
-async function getOppositionNotes(team) {
+async function getOppositionNotes(team, season) {
   const database = await connect();
+  const query = season ? { team, season } : { team };
   const notes = await database.collection('opposition_notes')
-    .find({ team })
+    .find(query)
     .sort({ created_at: 1 })
     .toArray();
   return notes.map(n => ({ _id: n._id.toString(), player: n.player, author: n.author, note: n.note, created_at: n.created_at }));
 }
 
-async function addOppositionNote(team, player, author, note) {
+async function addOppositionNote(team, player, author, note, season) {
   const database = await connect();
-  const doc = { team, player, author, note, created_at: new Date() };
+  const doc = { team, player, author, note, created_at: new Date(), ...(season ? { season } : {}) };
   const result = await database.collection('opposition_notes').insertOne(doc);
   return { _id: result.insertedId.toString(), team, player, author, note, created_at: doc.created_at };
 }
@@ -196,18 +202,19 @@ async function deleteOppositionNote(id) {
 
 // ── ROUND OPPOSITION NOTES ────────────────────────────────────────────────────
 
-async function getRoundNotes(roundNum) {
+async function getRoundNotes(roundNum, season) {
   const database = await connect();
+  const query = season ? { round_num: roundNum, season } : { round_num: roundNum };
   const notes = await database.collection('round_notes')
-    .find({ round_num: roundNum })
+    .find(query)
     .sort({ created_at: 1 })
     .toArray();
   return notes.map(n => ({ _id: n._id.toString(), round_num: n.round_num, author: n.author, note: n.note, created_at: n.created_at }));
 }
 
-async function addRoundNote(roundNum, author, note) {
+async function addRoundNote(roundNum, author, note, season) {
   const database = await connect();
-  const doc = { round_num: roundNum, author, note, created_at: new Date() };
+  const doc = { round_num: roundNum, author, note, created_at: new Date(), ...(season ? { season } : {}) };
   const result = await database.collection('round_notes').insertOne(doc);
   return { _id: result.insertedId.toString(), round_num: roundNum, author, note, created_at: doc.created_at };
 }
@@ -219,31 +226,37 @@ async function deleteRoundNote(id) {
 
 // ── LEAGUE ANALYSIS DATA ─────────────────────────────────────────────────────
 
-async function getLeagueData() {
+async function getLeagueData(season) {
   const database = await connect();
-  const doc = await database.collection('league').findOne({ _id: 'data' });
+  const id = season ? `data_${season}` : 'data';
+  let doc = await database.collection('league').findOne({ _id: id });
+  if (!doc && season) doc = await database.collection('league').findOne({ _id: 'data' });
   return doc ? doc.data : null;
 }
 
-async function setLeagueData(data) {
+async function setLeagueData(data, season) {
   const database = await connect();
+  const id = season ? `data_${season}` : 'data';
   await database.collection('league').updateOne(
-    { _id: 'data' },
+    { _id: id },
     { $set: { data, updated_at: new Date() } },
     { upsert: true }
   );
 }
 
-async function getLeagueRoundsData() {
+async function getLeagueRoundsData(season) {
   const database = await connect();
-  const doc = await database.collection('league').findOne({ _id: 'rounds' });
+  const id = season ? `rounds_${season}` : 'rounds';
+  let doc = await database.collection('league').findOne({ _id: id });
+  if (!doc && season) doc = await database.collection('league').findOne({ _id: 'rounds' });
   return doc ? doc.data : null;
 }
 
-async function setLeagueRoundsData(data) {
+async function setLeagueRoundsData(data, season) {
   const database = await connect();
+  const id = season ? `rounds_${season}` : 'rounds';
   await database.collection('league').updateOne(
-    { _id: 'rounds' },
+    { _id: id },
     { $set: { data, updated_at: new Date() } },
     { upsert: true }
   );

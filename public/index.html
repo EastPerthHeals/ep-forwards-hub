@@ -338,9 +338,28 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
     <div class="lock-error" id="lockError"></div>
   </div>
 </div>
+<div class="lock-overlay" id="seasonPicker" style="display:none">
+  <div style="background:#1a2235;border-radius:14px;padding:40px 32px;max-width:520px;width:92%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+    <img src="/logo.png" alt="East Perth FC" style="height:52px;width:auto;margin-bottom:18px"/>
+    <h2 style="color:#e8eaf0;margin:0 0 8px;font-size:1.3rem;letter-spacing:.5px">Select Season</h2>
+    <p style="color:#8899bb;margin:0 0 28px;font-size:.9rem">Where would you like to go?</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap">
+      <button onclick="chooseSeason(2026)" style="flex:1;min-width:180px;padding:28px 20px;background:#0f1724;border:2px solid #2d3a52;border-radius:12px;color:#e8eaf0;cursor:pointer;transition:border-color .2s,background .2s" onmouseover="this.style.borderColor='#b07fe8';this.style.background='#1c2740'" onmouseout="this.style.borderColor='#2d3a52';this.style.background='#0f1724'">
+        <div style="font-size:2rem;margin-bottom:8px">🗄️</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#b07fe8;margin-bottom:6px">Archive</div>
+        <div style="font-size:.8rem;color:#8899bb">View 2026 season data</div>
+      </button>
+      <button onclick="chooseSeason(2027)" style="flex:1;min-width:180px;padding:28px 20px;background:#0f1724;border:2px solid #2d3a52;border-radius:12px;color:#e8eaf0;cursor:pointer;transition:border-color .2s,background .2s" onmouseover="this.style.borderColor='#4ecb8d';this.style.background='#1c2740'" onmouseout="this.style.borderColor='#2d3a52';this.style.background='#0f1724'">
+        <div style="font-size:2rem;margin-bottom:8px">🏆</div>
+        <div style="font-size:1.1rem;font-weight:700;color:#4ecb8d;margin-bottom:6px">Season 2027</div>
+        <div style="font-size:.8rem;color:#8899bb">Current season hub</div>
+      </button>
+    </div>
+  </div>
+</div>
 <div class="header">
   <img src="/logo.png" alt="East Perth FC" style="height:42px;width:auto;"/>
-  <div><span class="header-title">East Perth League Hub</span><span class="header-sub">2026</span></div>
+  <div><span class="header-title">East Perth League Hub</span><span class="header-sub" id="headerSeasonLabel">2027</span></div>
   <a href="/admin/" class="header-admin" style="margin-left:auto">Admin</a>
 </div>
 <div class="toptabs" id="superTabs">
@@ -540,10 +559,16 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 <script>
 // ── SITE LOCK ────────────────────────────────────────────────────────────────
 const SITE_PW_KEY = 'ep_site_password';
+const SEASON_KEY = 'ep_active_season';
+
+let activeSeason = parseInt(sessionStorage.getItem(SEASON_KEY)) || 0;
 
 function siteFetch(url, opts={}){
   const pw = localStorage.getItem(SITE_PW_KEY) || '';
   opts.headers = Object.assign({}, opts.headers, {'x-site-password': pw});
+  if(activeSeason && url.startsWith('/api/') && !/\/(site-login|coaches-login|gameday-login|gameday|admin)/.test(url)){
+    url += (url.includes('?') ? '&' : '?') + 'season=' + activeSeason;
+  }
   return fetch(url, opts).then(r=>{
     if(r.status===401){ showLock('Session expired — please re-enter the password.'); throw new Error('locked'); }
     return r;
@@ -554,9 +579,26 @@ function showLock(msg=''){
   document.getElementById('lockOverlay').style.display='flex';
   document.getElementById('lockError').textContent=msg;
   localStorage.removeItem(SITE_PW_KEY);
+  sessionStorage.removeItem(SEASON_KEY);
+  activeSeason = 0;
 }
 function hideLock(){
   document.getElementById('lockOverlay').style.display='none';
+}
+
+function showSeasonPicker(){
+  document.getElementById('seasonPicker').style.display='flex';
+}
+function hideSeasonPicker(){
+  document.getElementById('seasonPicker').style.display='none';
+}
+
+function chooseSeason(season){
+  activeSeason = season;
+  sessionStorage.setItem(SEASON_KEY, season);
+  hideSeasonPicker();
+  document.getElementById('headerSeasonLabel').textContent = season === 2026 ? '2026 Archive' : '2027';
+  boot();
 }
 
 async function trySiteLogin(){
@@ -569,7 +611,7 @@ async function trySiteLogin(){
       localStorage.setItem(SITE_PW_KEY, pw);
       err.textContent='';
       hideLock();
-      boot();
+      showSeasonPicker();
     } else {
       err.textContent='Incorrect password — please try again.';
     }
@@ -583,7 +625,17 @@ async function checkSiteAccess(){
   if(!stored){ showLock(); return false; }
   try{
     const res = await fetch('/api/site-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:stored})}).then(r=>r.json());
-    if(res.ok){ hideLock(); return true; }
+    if(res.ok){
+      hideLock();
+      // If we have a season from this session, go straight to hub
+      if(activeSeason){
+        document.getElementById('headerSeasonLabel').textContent = activeSeason === 2026 ? '2026 Archive' : '2027';
+        return true;
+      }
+      // Otherwise show picker
+      showSeasonPicker();
+      return false;
+    }
     showLock('Please enter the current access password.');
     return false;
   }catch(e){
