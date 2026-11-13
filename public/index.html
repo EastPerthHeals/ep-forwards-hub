@@ -1845,12 +1845,12 @@ function renderSeasonCharts(){
 
 // ── MIDFIELDERS ROUND BY ROUND ───────────────────────────────────────────────
 const MID_RADAR_STATS = [
-  { key: 'mid_cbfp', label: 'CB 1st Poss', diffKey: 'mfr_cbfp_diff' },
-  { key: 'mid_clr',  label: 'Clearances',  diffKey: 'mfr_clr_diff',  weight: 2 },
-  { key: 'mid_i50',  label: 'Inside 50s',  diffKey: 'mfr_i50_diff' },
-  { key: 'mid_si',   label: 'Score Inv',   diffKey: 'mfr_si_diff',   div: 3 },
-  { key: 'mid_cp',   label: 'Cont Poss' },
-  { key: 'mid_gbg',  label: 'GBG' },
+  { key: 'mid_cbfp', label: 'CB 1st Poss',          barLabel: 'CB First Possession',    diffKey: 'mfr_cbfp_diff' },
+  { key: 'mid_clr',  label: 'Clearances',            barLabel: 'Clearances',             diffKey: 'mfr_clr_diff',  weight: 2 },
+  { key: 'mid_i50',  label: 'Inside 50s',            barLabel: 'Inside 50s',             diffKey: 'mfr_i50_diff' },
+  { key: 'mid_si',   label: 'Score Inv',             barLabel: 'Score Involvement',      diffKey: 'mfr_si_diff',   div: 3 },
+  { key: 'mid_cp',   label: 'Cont Poss',             barLabel: 'Contested Possessions' },
+  { key: 'mid_gbg',  label: 'Ground Ball Gets',      barLabel: 'Ground Ball Gets' },
 ];
 
 // Typical game maxima for normalising the radar axes
@@ -1871,53 +1871,58 @@ function selectMidRound(i, btn){
 }
 
 function buildMidRadarSVG(r){
-  const cx=160, cy=145, maxR=110, n=MID_RADAR_STATS.length;
+  // Larger canvas with generous padding so labels never clip
+  const cx=200, cy=190, maxR=130, n=MID_RADAR_STATS.length;
   const angle = i => (Math.PI*2*i/n) - Math.PI/2;
   const pt = (pct, i) => {
     const a=angle(i), rad=pct*maxR;
     return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad];
   };
+  // viewBox: 400 wide, 380 tall — room for labels on all 6 sides
+  let svg=`<svg viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">`;
+  // Background
+  svg+=`<rect width="400" height="380" fill="white" rx="10"/>`;
   // Grid rings
-  let svg=`<svg viewBox="0 0 320 290" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:340px">`;
   [0.25,0.5,0.75,1].forEach(frac=>{
     const pts=MID_RADAR_STATS.map((_,i)=>pt(frac,i).join(','));
-    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(99,131,179,0.18)" stroke-width="1"/>`;
+    const opacity = frac===1 ? 0.35 : 0.18;
+    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(0,48,135,${opacity})" stroke-width="${frac===1?1.5:1}"/>`;
   });
   // Axes
   MID_RADAR_STATS.forEach((_,i)=>{
     const [x,y]=pt(1,i);
-    svg+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(99,131,179,0.25)" stroke-width="1"/>`;
+    svg+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(0,48,135,0.2)" stroke-width="1.2"/>`;
   });
+  // Opp polygon (behind EP)
+  const oppPts = MID_RADAR_STATS.map((s,i)=>{
+    const val = r[s.key+'_opp'] || 0;
+    return pt(Math.min(val/MID_RADAR_MAX[s.key],1),i).join(',');
+  });
+  svg+=`<polygon points="${oppPts.join(' ')}" fill="rgba(192,57,43,0.12)" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="6,4"/>`;
   // EP polygon
   const epPts = MID_RADAR_STATS.map((s,i)=>{
     const val = r[s.key+'_ep'] || 0;
-    const pct = Math.min(val / MID_RADAR_MAX[s.key], 1);
-    return pt(pct,i).join(',');
+    return pt(Math.min(val/MID_RADAR_MAX[s.key],1),i).join(',');
   });
-  svg+=`<polygon points="${epPts.join(' ')}" fill="rgba(74,127,193,0.22)" stroke="#4a7fc1" stroke-width="2.5"/>`;
-  // Opp polygon
-  const oppPts = MID_RADAR_STATS.map((s,i)=>{
-    const val = r[s.key+'_opp'] || 0;
-    const pct = Math.min(val / MID_RADAR_MAX[s.key], 1);
-    return pt(pct,i).join(',');
-  });
-  svg+=`<polygon points="${oppPts.join(' ')}" fill="rgba(192,57,43,0.15)" stroke="#c0392b" stroke-width="2" stroke-dasharray="5,3"/>`;
-  // EP dots + opp dots
+  svg+=`<polygon points="${epPts.join(' ')}" fill="rgba(0,48,135,0.18)" stroke="#003087" stroke-width="3"/>`;
+  // Dots
   MID_RADAR_STATS.forEach((s,i)=>{
     const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
-    const epPct=Math.min(epVal/MID_RADAR_MAX[s.key],1), oppPct=Math.min(oppVal/MID_RADAR_MAX[s.key],1);
-    const [ex,ey]=pt(epPct,i); const [ox,oy]=pt(oppPct,i);
-    svg+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4" fill="#4a7fc1"/>`;
-    svg+=`<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="3.5" fill="#c0392b" opacity="0.85"/>`;
+    const [ex,ey]=pt(Math.min(epVal/MID_RADAR_MAX[s.key],1),i);
+    const [ox,oy]=pt(Math.min(oppVal/MID_RADAR_MAX[s.key],1),i);
+    svg+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="#003087"/>`;
+    svg+=`<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4.5" fill="#c0392b" opacity="0.9"/>`;
   });
-  // Labels
+  // Labels — positioned further out to avoid clipping
   MID_RADAR_STATS.forEach((s,i)=>{
-    const a=angle(i), lx=cx+Math.cos(a)*(maxR+22), ly=cy+Math.sin(a)*(maxR+22);
-    const anchor = Math.abs(Math.cos(a))<0.15 ? 'middle' : (Math.cos(a)<0 ? 'end' : 'start');
+    const a=angle(i);
+    const lx=cx+Math.cos(a)*(maxR+34), ly=cy+Math.sin(a)*(maxR+34);
+    const anchor = Math.abs(Math.cos(a))<0.2 ? 'middle' : (Math.cos(a)<0 ? 'end' : 'start');
     const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
-    const diff=epVal-oppVal; const diffCol=diff>0?'#4ecb8d':diff<0?'#e07070':'#8899b4';
-    svg+=`<text x="${lx.toFixed(1)}" y="${(ly-5).toFixed(1)}" text-anchor="${anchor}" fill="#8899b4" font-size="11" font-family="Segoe UI,sans-serif">${s.label}</text>`;
-    svg+=`<text x="${lx.toFixed(1)}" y="${(ly+9).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="12" font-family="Segoe UI,sans-serif" font-weight="700">${epVal} / ${oppVal}</text>`;
+    const diff=epVal-oppVal;
+    const diffCol=diff>0?'#16a34a':diff<0?'#dc2626':'#6b7280';
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly-6).toFixed(1)}" text-anchor="${anchor}" fill="#374151" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="600">${s.label}</text>`;
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly+11).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="800">${epVal} / ${oppVal}</text>`;
   });
   svg+=`</svg>`;
   return svg;
@@ -1932,21 +1937,23 @@ function renderMidRoundContent(idx, rounds){
   const cellCol = v => v>0?'#4ecb8d':v<0?'#e07070':'var(--text-muted)';
   const mfrCol = r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)';
 
-  // ── ANALYST DASHBOARD LAYOUT ──
+  // ── ANALYST DASHBOARD LAYOUT — white card ──
+  const W = '#ffffff', BORDER = '#e5e7eb', SUBTEXT = '#6b7280', MAINTEXT = '#111827';
+
   // Header row: MFR badge + round info
-  let h = `<div style="display:flex;align-items:center;gap:18px;padding:18px 20px 16px;background:var(--bg-card);border-radius:14px 14px 0 0;border-bottom:1px solid var(--border-col);margin-bottom:0">
-    <div style="background:var(--accent);border-radius:12px;padding:12px 20px;text-align:center;min-width:100px;flex-shrink:0">
-      <div style="font-size:2rem;font-weight:900;line-height:1;color:#fff">${r.mfr>0?'+':''}${r.mfr}</div>
-      <div style="font-size:9px;letter-spacing:0.09em;opacity:0.85;color:#fff;margin-top:3px">MFR RATING</div>
+  let h = `<div style="display:flex;align-items:center;gap:20px;padding:20px 24px 18px;background:${W};border-radius:14px 14px 0 0;border:1px solid ${BORDER};border-bottom:none">
+    <div style="background:#003087;border-radius:14px;padding:14px 24px;text-align:center;min-width:110px;flex-shrink:0">
+      <div style="font-size:2.4rem;font-weight:900;line-height:1;color:#fff">${r.mfr>0?'+':''}${r.mfr}</div>
+      <div style="font-size:10px;letter-spacing:0.1em;opacity:0.85;color:#fff;margin-top:4px">MFR RATING</div>
     </div>
     <div style="min-width:0">
-      <div style="font-size:1.1rem;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+      <div style="font-size:1.3rem;font-weight:800;color:${MAINTEXT}">
         ${r.short} — Midfielders
-        <span style="font-size:11px;padding:2px 10px;border-radius:10px;margin-left:8px;background:${wlBg};color:${wlCol};font-weight:700">${r.wl==='W'?'WIN':'LOSS'}</span>
+        <span style="font-size:12px;padding:3px 12px;border-radius:999px;margin-left:10px;background:${wlBg};color:${wlCol};font-weight:700;vertical-align:middle">${r.wl==='W'?'WIN':'LOSS'}</span>
       </div>
-      <div style="font-size:0.82rem;color:var(--text-muted);margin-top:4px">Midfield Force Rating · 2026 Season</div>
-      <div style="font-size:0.8rem;margin-top:6px">
-        <span style="color:var(--text-muted)">Top-3 benchmark: <strong style="color:var(--text-muted)">+12</strong></span>
+      <div style="font-size:0.9rem;color:${SUBTEXT};margin-top:5px">Midfield Force Rating · 2026 Season</div>
+      <div style="font-size:0.9rem;margin-top:7px">
+        <span style="color:${SUBTEXT}">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></span>
         &nbsp;·&nbsp;
         <span style="color:${mfrCol};font-weight:700">${r.mfr>=12?'✓ Above target':'✗ Below target'}</span>
       </div>
@@ -1954,50 +1961,55 @@ function renderMidRoundContent(idx, rounds){
   </div>`;
 
   // Two-column body: radar left, bars right
-  h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--bg-card);border-radius:0 0 14px 14px;border-top:none;overflow:hidden;margin-bottom:18px">`;
+  h += `<div style="display:grid;grid-template-columns:52% 48%;background:${W};border-radius:0 0 14px 14px;border:1px solid ${BORDER};border-top:1px solid ${BORDER};overflow:hidden;margin-bottom:20px">`;
 
   // LEFT: radar
-  h += `<div style="padding:16px 12px 16px 16px;border-right:1px solid var(--border-col)">`;
-  h += `<div style="font-size:10px;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:10px">RADAR · EP vs OPP</div>`;
+  h += `<div style="padding:20px 16px 20px 20px;border-right:1px solid ${BORDER}">`;
+  h += `<div style="font-size:11px;letter-spacing:0.08em;color:${SUBTEXT};font-weight:700;margin-bottom:12px;text-transform:uppercase">Radar · EP vs Opposition</div>`;
   h += buildMidRadarSVG(r);
-  h += `<div style="display:flex;gap:16px;justify-content:center;margin-top:8px;font-size:11px;color:var(--text-muted)">
-    <span><span style="color:#4a7fc1">━━</span> East Perth</span>
+  h += `<div style="display:flex;gap:20px;justify-content:center;margin-top:12px;font-size:13px;color:${SUBTEXT}">
+    <span><span style="color:#003087;font-weight:900">━━</span> East Perth</span>
     <span><span style="color:#c0392b">╌╌</span> Opposition</span>
   </div>`;
   h += `</div>`;
 
-  // RIGHT: horizontal bars
-  h += `<div style="padding:16px 16px 16px 14px">`;
-  h += `<div style="font-size:10px;letter-spacing:0.08em;color:var(--text-muted);font-weight:700;margin-bottom:12px">STATS HEAD-TO-HEAD</div>`;
+  // RIGHT: horizontal bars — scale relative to max(ep, opp) per stat so bars are always meaningful
+  h += `<div style="padding:20px 20px 20px 18px">`;
+  h += `<div style="font-size:11px;letter-spacing:0.08em;color:${SUBTEXT};font-weight:700;margin-bottom:16px;text-transform:uppercase">Stats Head-to-Head</div>`;
   MID_RADAR_STATS.forEach(s => {
     const ep = r[s.key+'_ep'] ?? null;
     const opp = r[s.key+'_opp'] ?? null;
-    const max = MID_RADAR_MAX[s.key];
-    const epPct = ep!=null ? Math.round(Math.min(ep/max,1)*100) : 0;
-    const oppPct = opp!=null ? Math.round(Math.min(opp/max,1)*100) : 0;
+    // Scale so the larger value = 100%, the smaller is proportional
+    const scale = (ep!=null && opp!=null) ? Math.max(ep, opp) : (ep ?? opp ?? 1);
+    const epPct  = ep!=null  ? Math.round((ep/scale)*100)  : 0;
+    const oppPct = opp!=null ? Math.round((opp/scale)*100) : 0;
     const diff = (ep!=null && opp!=null) ? ep-opp : null;
     let weightNote = '';
-    if(diff!==null && s.weight){ weightNote=` <span style="font-size:9px;color:var(--text-muted)">(×${s.weight})</span>`; }
-    else if(diff!==null && s.div){ weightNote=` <span style="font-size:9px;color:var(--text-muted)">(÷${s.div})</span>`; }
-    h += `<div style="margin-bottom:11px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <span style="font-size:0.78rem;font-weight:700;color:var(--text-main)">${s.label}${weightNote}</span>
-        <span style="font-size:0.8rem;font-weight:700;color:${diff!==null?cellCol(diff):'var(--text-muted)'}">${diff!==null?signFmt(diff):'—'}</span>
+    if(diff!==null && s.weight){ weightNote=` <span style="font-size:11px;color:${SUBTEXT};font-weight:400">(×${s.weight} in MFR)</span>`; }
+    else if(diff!==null && s.div){ weightNote=` <span style="font-size:11px;color:${SUBTEXT};font-weight:400">(÷${s.div} in MFR)</span>`; }
+    h += `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-size:0.95rem;font-weight:700;color:${MAINTEXT}">${s.barLabel}${weightNote}</span>
+        <span style="font-size:0.95rem;font-weight:800;color:${diff!==null?cellCol(diff):SUBTEXT}">${diff!==null?signFmt(diff):'—'}</span>
       </div>
-      <div style="background:var(--border-col);border-radius:999px;height:7px;overflow:hidden">
-        <div style="width:${epPct}%;height:100%;background:#4a7fc1;border-radius:999px"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <span style="font-size:12px;color:#003087;font-weight:700;width:26px;text-align:right;flex-shrink:0">EP</span>
+        <div style="flex:1;background:#e8eef7;border-radius:999px;height:11px;overflow:hidden">
+          <div style="width:${epPct}%;height:100%;background:#003087;border-radius:999px"></div>
+        </div>
+        <span style="font-size:13px;font-weight:800;color:#003087;width:30px;flex-shrink:0">${ep??'—'}</span>
       </div>
-      <div style="background:var(--border-col);border-radius:999px;height:7px;overflow:hidden;margin-top:3px">
-        <div style="width:${oppPct}%;height:100%;background:#c0392b;border-radius:999px"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text-muted);margin-top:2px">
-        <span style="color:#4a7fc1">${ep??'—'}</span>
-        <span style="color:#c0392b">${opp??'—'}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:12px;color:#c0392b;font-weight:700;width:26px;text-align:right;flex-shrink:0">Opp</span>
+        <div style="flex:1;background:#fdf0ef;border-radius:999px;height:11px;overflow:hidden">
+          <div style="width:${oppPct}%;height:100%;background:#c0392b;border-radius:999px"></div>
+        </div>
+        <span style="font-size:13px;font-weight:800;color:#c0392b;width:30px;flex-shrink:0">${opp??'—'}</span>
       </div>
     </div>`;
   });
-  h += `<div style="margin-top:8px;padding:9px 11px;background:var(--bg-card2);border-radius:8px;font-size:0.78rem;color:var(--text-muted)">
-    <strong style="color:var(--text-main)">MFR =</strong> CB + (Clr ×2) + I50 + (SI ÷3)
+  h += `<div style="margin-top:12px;padding:10px 13px;background:#f3f4f6;border-radius:8px;font-size:13px;color:${SUBTEXT}">
+    <strong style="color:${MAINTEXT}">MFR =</strong> CB First Poss + (Clearances ×2) + Inside 50s + (Score Inv ÷3)
   </div>`;
   h += `</div>`; // end right col
   h += `</div>`; // end grid
