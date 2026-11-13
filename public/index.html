@@ -29,7 +29,20 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font)
 .analysis-good{background:rgba(78,203,141,0.12);color:var(--c-green);border:1px solid rgba(78,203,141,0.3)}
 .analysis-bad{background:rgba(224,112,112,0.12);color:var(--c-red);border:1px solid rgba(224,112,112,0.3)}
 .analysis-neutral{background:rgba(136,153,180,0.1);color:var(--text-muted);border:1px solid var(--border)}
-body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;}
+body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;transition:opacity 0.2s,background-color 0.2s;}
+body.page-white{background:#f8f9fb;}
+body.page-white::before{opacity:0.07;}
+body.page-white .header{background:#fff;border-bottom:1px solid #e5e7eb;}
+body.page-white .header-title,body.page-white .header-sub{color:#1a1d23;}
+body.page-white .header-dot{background:#003087;}
+body.page-white .nav{background:#fff;border-bottom:1px solid #e5e7eb;}
+body.page-white .nav-btn{color:#374151;border-color:#e5e7eb;background:#fff;}
+body.page-white .nav-btn.active{background:#003087;color:#fff;border-color:#003087;}
+body.page-white .round-tabs{background:#f1f5f9;border-bottom:1px solid #e5e7eb;}
+body.page-white .round-tab{color:#374151;background:transparent;border-color:transparent;}
+body.page-white .round-tab.active{background:#003087;color:#fff;border-color:#003087;}
+body.page-white .section-label{color:#374151;}
+body.page-white .hint{color:#6b7280;}
 .page,.header,.nav{position:relative;z-index:1;}
 .header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:60px;gap:14px;position:sticky;top:0;z-index:100}
 .header-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
@@ -834,6 +847,7 @@ function showPage(n,b){
   document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
+  document.body.classList.toggle('page-white', n==='mid-team');
   if(n==='mfr') loadMFRPage();
   if(n==='mid-team') renderMidRounds();
 }
@@ -1850,7 +1864,7 @@ const MID_RADAR_STATS = [
   { key: 'mid_i50',  label: 'Inside 50s',            barLabel: 'Inside 50s',             diffKey: 'mfr_i50_diff' },
   { key: 'mid_si',   label: 'Score Inv',             barLabel: 'Score Involvement',      diffKey: 'mfr_si_diff',   div: 3 },
   { key: 'mid_cp',   label: 'Cont Poss',             barLabel: 'Contested Possessions' },
-  { key: 'mid_gbg',  label: 'Ground Ball Gets',      barLabel: 'Ground Ball Gets' },
+  { key: 'mid_gbg',  label: "GBG's",                  barLabel: 'Ground Ball Gets' },
 ];
 
 // Typical game maxima for normalising the radar axes
@@ -1940,8 +1954,17 @@ function renderMidRoundContent(idx, rounds){
   // ── ANALYST DASHBOARD LAYOUT — white card ──
   const W = '#ffffff', BORDER = '#e5e7eb', SUBTEXT = '#6b7280', MAINTEXT = '#111827';
 
+  // MFR formula explanation — pinned at top of page
+  let h = `<div style="background:#fff;border:1px solid ${BORDER};border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.1em;color:#003087;text-transform:uppercase;flex-shrink:0">MFR Formula</div>
+    <div style="font-size:0.95rem;color:${MAINTEXT};font-weight:600">
+      CB First Poss Diff &nbsp;+&nbsp; (Clearances Diff <span style="color:#003087">×2</span>) &nbsp;+&nbsp; Inside 50 Diff &nbsp;+&nbsp; (Score Inv Diff <span style="color:#003087">÷3</span>)
+    </div>
+    <div style="margin-left:auto;font-size:0.88rem;color:${SUBTEXT};white-space:nowrap">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></div>
+  </div>`;
+
   // Header row: MFR badge + round info
-  let h = `<div style="display:flex;align-items:center;gap:20px;padding:20px 24px 18px;background:${W};border-radius:14px 14px 0 0;border:1px solid ${BORDER};border-bottom:none">
+  h += `<div style="display:flex;align-items:center;gap:20px;padding:20px 24px 18px;background:${W};border-radius:14px 14px 0 0;border:1px solid ${BORDER};border-bottom:none">
     <div style="background:#003087;border-radius:14px;padding:14px 24px;text-align:center;min-width:110px;flex-shrink:0">
       <div style="font-size:2.4rem;font-weight:900;line-height:1;color:#fff">${r.mfr>0?'+':''}${r.mfr}</div>
       <div style="font-size:10px;letter-spacing:0.1em;opacity:0.85;color:#fff;margin-top:4px">MFR RATING</div>
