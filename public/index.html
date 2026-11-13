@@ -829,6 +829,9 @@ function switchCoachesSeason(year, btn){
     document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
   }
   coachesData = null;
+  ['coaches-ep-content','coaches-scout-content','coaches-comp-content'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML='';
+  });
   loadCoachesDataIfNeeded(true);
 }
 
@@ -1697,7 +1700,22 @@ function renderCoachesComp(){renderCompContent();}
 let allRounds=[];
 let seasonChart=null, wlChart=null, kpiChart=null;
 
+function clearPlayersContent(){
+  document.getElementById('seasonSummaryGrid').innerHTML='';
+  document.getElementById('metricTabBar').innerHTML='';
+  document.getElementById('metricAvgGrid').innerHTML='';
+  const head=document.getElementById('metricTableHead'); if(head) head.innerHTML='';
+  const body=document.getElementById('metricTableBody'); if(body) body.innerHTML='';
+  document.getElementById('teamRoundTabs').innerHTML='';
+  document.getElementById('teamContent').innerHTML='';
+  const intro=document.getElementById('analysisIntro'); if(intro) intro.textContent='';
+  const atbody=document.getElementById('analysisTableBody'); if(atbody) atbody.innerHTML='';
+  const takes=document.getElementById('analysisTakeaways'); if(takes) takes.innerHTML='';
+  ['seasonChart','kpiChart','wlChart'].forEach(id=>{const el=document.getElementById(id);if(el){const ex=Chart.getChart(el);if(ex)ex.destroy();}});
+}
+
 async function loadData(){
+  clearPlayersContent();
   let visSettings;
   [allRounds, visSettings] = await Promise.all([
     siteFetch('/api/rounds').then(r=>r.json()),
