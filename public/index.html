@@ -360,7 +360,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 </div>
 <div class="readonly-banner" id="readonlyBanner">2026 Season — Read Only</div>
 <div class="nav" id="playersNav" style="top:148px">
-  <button class="nav-btn season-archive-btn" id="nav-2026" onclick="switchSeason(2026,this)">2026</button>
+  <button class="nav-btn season-archive-btn" id="nav-2026" data-toptabs="Forwards,Midfielders,Defenders" onclick="switchSeason(2026,this)">2026</button>
   <div class="season-divider" style="height:16px;margin:0 4px 0 2px"></div>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('kpi',this)">KPI Targets</button>
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
@@ -369,6 +369,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn" data-toptabs="Forwards,Midfielders,Defenders" onclick="showPage('opposition',this)">Opposition</button>
 </div>
 <div class="nav" id="coachesNav" style="display:none;top:104px">
+  <button class="nav-btn season-archive-btn" id="coaches-nav-2026" onclick="switchCoachesSeason(2026,this)">2026</button>
+  <div class="season-divider" style="height:16px;margin:0 4px 0 2px"></div>
   <button class="nav-btn active" onclick="showCoachesPage('ep',this)">EP Report</button>
   <button class="nav-btn" onclick="showCoachesPage('scout',this)">Opponent Scout</button>
   <button class="nav-btn" onclick="showCoachesPage('comp',this)">Competition</button>
@@ -814,9 +816,23 @@ async function submitCoachesLock(){
   }
 }
 
+let coachesActiveSeason = ACTIVE_SEASON;
+
+function switchCoachesSeason(year, btn){
+  if(coachesActiveSeason === year){
+    coachesActiveSeason = ACTIVE_SEASON;
+    btn.classList.remove('active');
+    document.getElementById('readonlyBanner').classList.remove('visible');
+  } else {
+    coachesActiveSeason = year;
+    btn.classList.add('active');
+    document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
+  }
+}
+
 function showCoachesPage(id, btn){
   document.querySelectorAll('.coaches-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#coachesNav .nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#coachesNav .nav-btn:not(.season-archive-btn)').forEach(b=>b.classList.remove('active'));
   document.getElementById('coaches-tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='rawstats') initRawStatsTab();
