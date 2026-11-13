@@ -47,10 +47,8 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
 .nav-btn:hover{color:var(--text-secondary)}
 .nav-btn.active{color:var(--accent-light);border-bottom-color:var(--accent)}
-.season-pill{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font)}
-.season-pill:hover{border-color:var(--accent);color:var(--text-secondary)}
-.season-pill.active{background:rgba(201,168,76,0.18);border-color:#c9a84c;color:#c9a84c}
-#season-pill-2027.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+.season-archive-btn{color:var(--text-muted)}
+.season-archive-btn.active{color:#c9a84c;border-bottom-color:#c9a84c}
 .season-divider{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 6px}
 .readonly-banner{display:none;background:rgba(201,168,76,0.1);border-bottom:1px solid rgba(201,168,76,0.3);padding:6px 24px;font-size:11px;color:#c9a84c;letter-spacing:0.5px;position:sticky;top:148px;z-index:98}
 .readonly-banner.visible{display:block}
@@ -356,15 +354,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="toptab-btn" onclick="showSuperTab('GameDay',this)">Game Day</button>
 </div>
 <div class="toptabs" id="lineTabs" style="top:104px;background:var(--bg-card2)">
-  <button class="season-pill" id="season-pill-2026" onclick="switchSeason(2026,this)">2026</button>
-  <button class="season-pill active" id="season-pill-2027" onclick="switchSeason(2027,this)">2027</button>
-  <div class="season-divider"></div>
   <button class="toptab-btn active" data-toptab="Forwards" onclick="showTopTab('Forwards',this)">Forwards</button>
   <button class="toptab-btn" data-toptab="Midfielders" onclick="showTopTab('Midfielders',this)">Midfielders</button>
   <button class="toptab-btn" data-toptab="Defenders" onclick="showTopTab('Defenders',this)">Defenders</button>
 </div>
 <div class="readonly-banner" id="readonlyBanner">2026 Season — Read Only</div>
 <div class="nav" id="playersNav" style="top:148px">
+  <button class="nav-btn season-archive-btn" id="nav-2026" onclick="switchSeason(2026,this)">2026</button>
+  <div class="season-divider" style="height:16px;margin:0 4px 0 2px"></div>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('kpi',this)">KPI Targets</button>
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('season',this)">Season Tracker</button>
@@ -692,14 +689,9 @@ const TOPTAB_OPP_LINE = {Forwards:'Defenders', Midfielders:'Midfielders', Defend
 function switchSeason(year, btn) {
   if (activeSeason === year) return;
   activeSeason = year;
-  document.querySelectorAll('.season-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#playersNav .nav-btn').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
-  const banner = document.getElementById('readonlyBanner');
-  if (year < ACTIVE_SEASON) {
-    banner.classList.add('visible');
-  } else {
-    banner.classList.remove('visible');
-  }
+  document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
   loadData();
 }
 
@@ -772,6 +764,13 @@ function showPage(n,b){
   document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
+  // Reset to current season when navigating to a regular tab
+  if(activeSeason !== ACTIVE_SEASON){
+    activeSeason = ACTIVE_SEASON;
+    document.getElementById('nav-2026').classList.remove('active');
+    document.getElementById('readonlyBanner').classList.remove('visible');
+    loadData();
+  }
 }
 
 async function submitGDLock(){
