@@ -47,6 +47,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
 .nav-btn:hover{color:var(--text-secondary)}
 .nav-btn.active{color:var(--accent-light);border-bottom-color:var(--accent)}
+.season-pill{background:none;border:1px solid var(--border);color:var(--text-muted);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;border-radius:20px;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font)}
+.season-pill:hover{border-color:var(--accent);color:var(--text-secondary)}
+.season-pill.active{background:rgba(201,168,76,0.18);border-color:#c9a84c;color:#c9a84c}
+#season-pill-2027.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-light)}
+.season-divider{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 6px}
+.readonly-banner{display:none;background:rgba(201,168,76,0.1);border-bottom:1px solid rgba(201,168,76,0.3);padding:6px 24px;font-size:11px;color:#c9a84c;letter-spacing:0.5px;position:sticky;top:148px;z-index:98}
+.readonly-banner.visible{display:block}
 .page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto}
 .page.active{display:block}
 .section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
@@ -349,10 +356,14 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="toptab-btn" onclick="showSuperTab('GameDay',this)">Game Day</button>
 </div>
 <div class="toptabs" id="lineTabs" style="top:104px;background:var(--bg-card2)">
+  <button class="season-pill" id="season-pill-2026" onclick="switchSeason(2026,this)">2026</button>
+  <button class="season-pill active" id="season-pill-2027" onclick="switchSeason(2027,this)">2027</button>
+  <div class="season-divider"></div>
   <button class="toptab-btn active" data-toptab="Forwards" onclick="showTopTab('Forwards',this)">Forwards</button>
   <button class="toptab-btn" data-toptab="Midfielders" onclick="showTopTab('Midfielders',this)">Midfielders</button>
   <button class="toptab-btn" data-toptab="Defenders" onclick="showTopTab('Defenders',this)">Defenders</button>
 </div>
+<div class="readonly-banner" id="readonlyBanner">2026 Season — Read Only</div>
 <div class="nav" id="playersNav" style="top:148px">
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('kpi',this)">KPI Targets</button>
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
@@ -544,6 +555,10 @@ const SITE_PW_KEY = 'ep_site_password';
 function siteFetch(url, opts={}){
   const pw = localStorage.getItem(SITE_PW_KEY) || '';
   opts.headers = Object.assign({}, opts.headers, {'x-site-password': pw});
+  // Append season to all /api/ calls (except login/gameday/league/admin)
+  if (url.startsWith('/api/') && !/\/(site-login|coaches-login|gameday-login|gameday|admin|league)/.test(url)) {
+    url += (url.includes('?') ? '&' : '?') + 'season=' + activeSeason;
+  }
   return fetch(url, opts).then(r=>{
     if(r.status===401){ showLock('Session expired — please re-enter the password.'); throw new Error('locked'); }
     return r;
@@ -670,7 +685,23 @@ function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];c
 const GD_PW_KEY = 'ep_gd_unlocked';
 const COACHES_PW_KEY = 'ep_coaches_unlocked';
 let currentTopTab = 'Forwards';
+let activeSeason = 2027;
+const ACTIVE_SEASON = 2027;
 const TOPTAB_OPP_LINE = {Forwards:'Defenders', Midfielders:'Midfielders', Defenders:'Forwards'};
+
+function switchSeason(year, btn) {
+  if (activeSeason === year) return;
+  activeSeason = year;
+  document.querySelectorAll('.season-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const banner = document.getElementById('readonlyBanner');
+  if (year < ACTIVE_SEASON) {
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+  loadData();
+}
 
 function showSuperTab(name, btn){
   document.querySelectorAll('#superTabs .toptab-btn').forEach(b=>b.classList.remove('active'));
@@ -2049,11 +2080,11 @@ async function loadOppositionPage(){
       + '<div class="opp-notes">'
       +   '<div class="opp-notes-title">Player Notes</div>'
       +   '<div class="opp-notes-list">'+notesList+'</div>'
-      +   '<div class="opp-note-form">'
+      +   (activeSeason >= ACTIVE_SEASON ? '<div class="opp-note-form">'
       +     '<input type="text" placeholder="Your name" maxlength="40">'
       +     '<textarea placeholder="E.g. felt comfortable to beat him on a lead, but 1 v 1 he is too strong, so don\'t engage in the wrestle." rows="2" maxlength="500"></textarea>'
       +     '<button type="button" onclick="addOppNote(this,\''+team.replace(/'/g,"\\'")+'\',\''+p.name.replace(/'/g,"\\'")+'\')">Add Note</button>'
-      +   '</div>'
+      +   '</div>' : '')
       + '</div>'
       + '</div>';
   }).join('');
@@ -2124,11 +2155,11 @@ function renderTeamContent(i){
   h+='<div class="section-label" style="margin-bottom:10px;margin-top:20px">Opposition Notes — '+r.label+'</div>'
     +'<div class="notes-box" style="border-color:var(--accent)">'
     +  '<div class="opp-notes-list" id="roundNotesList"><p class="hint" style="margin:0">Loading...</p></div>'
-    +  '<div class="opp-note-form">'
+    +  (activeSeason >= ACTIVE_SEASON ? '<div class="opp-note-form">'
     +    '<input type="text" id="roundNoteAuthor" placeholder="Your name" maxlength="40">'
     +    '<textarea id="roundNoteText" placeholder="What did you think and feel about the opposition this round?" rows="2" maxlength="500"></textarea>'
     +    '<button type="button" onclick="addRoundNote('+r.round_num+')">Add Note</button>'
-    +  '</div>'
+    +  '</div>' : '')
     +'</div>';
 
   document.getElementById('teamContent').innerHTML=h;
