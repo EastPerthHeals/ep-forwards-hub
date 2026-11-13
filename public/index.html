@@ -687,9 +687,15 @@ const ACTIVE_SEASON = 2027;
 const TOPTAB_OPP_LINE = {Forwards:'Defenders', Midfielders:'Midfielders', Defenders:'Forwards'};
 
 function switchSeason(year, btn) {
-  if (activeSeason === year) return;
+  // Toggle: clicking 2026 again returns to 2027
+  if (activeSeason === year) {
+    activeSeason = ACTIVE_SEASON;
+    btn.classList.remove('active');
+    document.getElementById('readonlyBanner').classList.remove('visible');
+    loadData();
+    return;
+  }
   activeSeason = year;
-  document.querySelectorAll('#playersNav .nav-btn').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
   loadData();
@@ -761,16 +767,11 @@ function applyOppLineForTopTab(){
 
 function showPage(n,b){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#playersNav .nav-btn:not(.season-archive-btn)').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
-  // Reset to current season when navigating to a regular tab
-  if(activeSeason !== ACTIVE_SEASON){
-    activeSeason = ACTIVE_SEASON;
-    document.getElementById('nav-2026').classList.remove('active');
-    document.getElementById('readonlyBanner').classList.remove('visible');
-    loadData();
-  }
+  // If in 2026 mode, reload data for the new sub-tab (season stays)
+  if(activeSeason !== ACTIVE_SEASON) loadData();
 }
 
 async function submitGDLock(){
