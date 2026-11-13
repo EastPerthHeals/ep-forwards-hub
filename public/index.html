@@ -378,6 +378,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('season',this)">Season Tracker</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('analysis',this)">Analysis</button>
+  <button class="nav-btn" data-toptabs="Midfielders" onclick="showPage('mfr',this)">MFR</button>
   <button class="nav-btn" data-toptabs="Forwards,Midfielders,Defenders" onclick="showPage('opposition',this)">Opposition</button>
 </div>
 <div class="nav" id="coachesNav" style="display:none;top:104px">
@@ -531,6 +532,32 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
       </div>
       <div id="rawStatsOutput"></div>
     </div>
+  </div>
+</div>
+
+<!-- MFR -->
+<div id="page-mfr" class="page">
+  <p class="section-label" style="margin-bottom:4px">Midfield Force Rating &mdash; 2026 Season</p>
+  <p class="hint" style="margin-bottom:12px">MFR = CBFP Diff + (Clearances Diff &times; 2) + I50 Diff + (Score Involvements Diff &divide; 3)</p>
+  <div class="colour-legend" style="margin-bottom:14px">
+    <div class="cl-item"><div class="cl-dot" style="background:#3b9e6e"></div>Win</div>
+    <div class="cl-item"><div class="cl-dot" style="background:#b03030"></div>Loss</div>
+    <div class="cl-item"><div class="cl-dot" style="background:rgba(180,180,255,0.5);border:1px dashed rgba(180,180,255,0.6)"></div>Top-3 benchmark (+12)</div>
+  </div>
+  <div class="chart-wrapper" style="height:220px;margin-bottom:20px"><canvas id="mfrChart"></canvas></div>
+  <div class="mfr-summary-row" id="mfrSummaryRow" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap"></div>
+  <div style="overflow-x:auto">
+    <table class="season-metrics-table" id="mfrTable">
+      <thead><tr>
+        <th>Round</th><th>W/L</th>
+        <th>MFR</th>
+        <th>CBFP Diff</th>
+        <th>Clr Diff</th>
+        <th>I50 Diff</th>
+        <th>SI Diff</th>
+      </tr></thead>
+      <tbody id="mfrTableBody"></tbody>
+    </table>
   </div>
 </div>
 
@@ -781,10 +808,11 @@ function showTopTab(name,btn){
     const tabs = (nb.dataset.toptabs||'').split(',');
     nb.style.display = tabs.includes(name) ? '' : 'none';
   });
-  const defaultPage = name==='Forwards' ? 'team' : 'opposition';
+  const defaultPage = name==='Forwards' ? 'team' : name==='Midfielders' ? 'mfr' : 'opposition';
   const defaultBtn = [...document.querySelectorAll('#playersNav .nav-btn')]
     .find(nb=>nb.getAttribute('onclick').includes("'"+defaultPage+"'"));
   showPage(defaultPage, defaultBtn);
+  if(defaultPage==='mfr') loadMFRPage();
   if(defaultPage==='opposition') applyOppLineForTopTab();
 }
 
@@ -800,6 +828,7 @@ function showPage(n,b){
   document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
+  if(n==='mfr') loadMFRPage();
 }
 
 async function submitGDLock(){
@@ -1805,6 +1834,108 @@ function renderSeasonCharts(){
   const wlEl=document.getElementById('wlChart');
   const ex=Chart.getChart(wlEl);if(ex)ex.destroy();
   new Chart(wlEl,{type:'bar',data:{labels:['Wins (avg)','Losses (avg)','Target'],datasets:[{data:[avgW,avgL,195],backgroundColor:['#3b9e6e','#b03030','rgba(180,210,255,0.3)'],borderRadius:8}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8899b4',font:{size:11}},grid:{color:'rgba(99,131,179,0.08)'},min:100,max:260},y:{ticks:{color:'#c0ccdc',font:{size:12}},grid:{display:false}}}}});
+}
+
+// ── MFR PAGE ─────────────────────────────────────────────────────────────────
+let mfrLoaded = false;
+async function loadMFRPage(){
+  if(mfrLoaded) return;
+  mfrLoaded = true;
+  // Pull rounds from API (already uploaded with mfr fields)
+  let rounds = allRounds.filter(r => r.mfr !== undefined && r.mfr !== null);
+  if(!rounds.length){
+    // fallback: use hardcoded 2026 data
+    rounds = [
+      {short:'Rd 1', wl:'L', mfr:-10, mfr_cbfp_diff:4, mfr_clr_diff:-6, mfr_i50_diff:-3, mfr_si_diff:3},
+      {short:'Rd 2', wl:'W', mfr:-10.3, mfr_cbfp_diff:-4, mfr_clr_diff:-9, mfr_i50_diff:3, mfr_si_diff:26},
+      {short:'Rd 3', wl:'L', mfr:-3.3, mfr_cbfp_diff:-1, mfr_clr_diff:-4, mfr_i50_diff:5, mfr_si_diff:2},
+      {short:'Rd 4', wl:'W', mfr:-2.3, mfr_cbfp_diff:3, mfr_clr_diff:1, mfr_i50_diff:-13, mfr_si_diff:17},
+      {short:'Rd 5', wl:'W', mfr:18.3, mfr_cbfp_diff:-3, mfr_clr_diff:7, mfr_i50_diff:4, mfr_si_diff:10},
+      {short:'Rd 6', wl:'L', mfr:27, mfr_cbfp_diff:4, mfr_clr_diff:13, mfr_i50_diff:2, mfr_si_diff:-15},
+      {short:'Rd 7', wl:'W', mfr:-2, mfr_cbfp_diff:-4, mfr_clr_diff:-6, mfr_i50_diff:6, mfr_si_diff:24},
+      {short:'Rd 8', wl:'L', mfr:-10.3, mfr_cbfp_diff:1, mfr_clr_diff:-5, mfr_i50_diff:-1, mfr_si_diff:-1},
+      {short:'Rd 9', wl:'W', mfr:17.3, mfr_cbfp_diff:-5, mfr_clr_diff:3, mfr_i50_diff:-5, mfr_si_diff:64},
+      {short:'Rd 11', wl:'L', mfr:-72.7, mfr_cbfp_diff:5, mfr_clr_diff:-9, mfr_i50_diff:-25, mfr_si_diff:-104},
+      {short:'Rd 12', wl:'W', mfr:-14.3, mfr_cbfp_diff:-4, mfr_clr_diff:1, mfr_i50_diff:-5, mfr_si_diff:-22},
+      {short:'Rd 13', wl:'W', mfr:51, mfr_cbfp_diff:-5, mfr_clr_diff:10, mfr_i50_diff:14, mfr_si_diff:66},
+      {short:'Rd 14', wl:'L', mfr:-58.7, mfr_cbfp_diff:-12, mfr_clr_diff:-13, mfr_i50_diff:-23, mfr_si_diff:7},
+      {short:'Rd 16', wl:'L', mfr:-66.3, mfr_cbfp_diff:-4, mfr_clr_diff:-19, mfr_i50_diff:-12, mfr_si_diff:-37},
+      {short:'Rd 17', wl:'W', mfr:-6.7, mfr_cbfp_diff:-3, mfr_clr_diff:-13, mfr_i50_diff:13, mfr_si_diff:28},
+      {short:'Rd 18', wl:'W', mfr:35, mfr_cbfp_diff:7, mfr_clr_diff:9, mfr_i50_diff:5, mfr_si_diff:15},
+      {short:'Rd 19', wl:'W', mfr:49, mfr_cbfp_diff:5, mfr_clr_diff:2, mfr_i50_diff:12, mfr_si_diff:84},
+      {short:'Rd 20', wl:'L', mfr:-26.7, mfr_cbfp_diff:-3, mfr_clr_diff:-5, mfr_i50_diff:-8, mfr_si_diff:-17},
+      {short:'FW1', wl:'L', mfr:-26.7, mfr_cbfp_diff:-3, mfr_clr_diff:-5, mfr_i50_diff:-8, mfr_si_diff:-17},
+      {short:'FW2', wl:'W', mfr:-10, mfr_cbfp_diff:-7, mfr_clr_diff:-5, mfr_i50_diff:2, mfr_si_diff:15},
+      {short:'PF', wl:'L', mfr:-3, mfr_cbfp_diff:6, mfr_clr_diff:1, mfr_i50_diff:0, mfr_si_diff:-33},
+    ];
+  }
+  renderMFRPage(rounds);
+}
+
+function renderMFRPage(rounds){
+  const BENCHMARK = 12; // top-3 average MFR
+  const labels = rounds.map(r=>r.short);
+  const mfrs = rounds.map(r=>r.mfr);
+  const wls = rounds.map(r=>r.wl);
+  const bc = mfrs.map((_,i)=>wls[i]==='W'?'#3b9e6e':'#b03030');
+
+  // Chart
+  const el = document.getElementById('mfrChart');
+  const ex = Chart.getChart(el); if(ex) ex.destroy();
+  new Chart(el, {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'MFR', data:mfrs, backgroundColor:bc, borderRadius:5, order:2},
+        {label:'Top-3 benchmark', data:Array(mfrs.length).fill(BENCHMARK), type:'line',
+          borderColor:'rgba(180,180,255,0.6)', borderDash:[6,4], borderWidth:2,
+          pointRadius:0, fill:false, order:1},
+        {label:'Zero', data:Array(mfrs.length).fill(0), type:'line',
+          borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
+          pointRadius:0, fill:false, order:0}
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#8899b4',font:{size:11}}, grid:{color:'rgba(99,131,179,0.08)'}},
+        y:{ticks:{color:'#8899b4',font:{size:11}}, grid:{color:'rgba(99,131,179,0.1)'}}
+      }
+    }
+  });
+
+  // Summary tiles
+  const wins = rounds.filter(r=>r.wl==='W');
+  const losses = rounds.filter(r=>r.wl==='L');
+  const avg = arr => arr.length ? Math.round(arr.reduce((s,r)=>s+r.mfr,0)/arr.length*10)/10 : 0;
+  const seasonAvg = Math.round(mfrs.reduce((a,b)=>a+b,0)/mfrs.length*10)/10;
+  const tiles = [
+    {label:'Season Avg MFR', val:seasonAvg, col: seasonAvg>=BENCHMARK?'#3b9e6e':seasonAvg>=-5?'#c8a52a':'#b03030'},
+    {label:'Win Avg MFR', val:avg(wins), col:'#3b9e6e'},
+    {label:'Loss Avg MFR', val:avg(losses), col:'#b03030'},
+    {label:'Top-3 Benchmark', val:'+'+BENCHMARK, col:'rgba(180,180,255,0.9)'},
+  ];
+  document.getElementById('mfrSummaryRow').innerHTML = tiles.map(t=>`
+    <div style="flex:1;min-width:130px;background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;text-align:center">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">${t.label}</div>
+      <div style="font-size:26px;font-weight:700;color:${t.col}">${typeof t.val==='number'?(t.val>0?'+':'')+t.val:t.val}</div>
+    </div>`).join('');
+
+  // Table
+  const signFmt = v => (v>0?'+':'')+v;
+  const cellCls = v => v>0?'style="color:#3b9e6e"':v<0?'style="color:#b03030"':'';
+  document.getElementById('mfrTableBody').innerHTML = rounds.map(r=>`
+    <tr>
+      <td>${r.short}</td>
+      <td style="color:${r.wl==='W'?'#3b9e6e':'#b03030'};font-weight:600">${r.wl}</td>
+      <td ${cellCls(r.mfr)}><strong>${signFmt(r.mfr)}</strong></td>
+      <td ${cellCls(r.mfr_cbfp_diff)}>${signFmt(r.mfr_cbfp_diff)}</td>
+      <td ${cellCls(r.mfr_clr_diff)}>${signFmt(r.mfr_clr_diff)}</td>
+      <td ${cellCls(r.mfr_i50_diff)}>${signFmt(r.mfr_i50_diff)}</td>
+      <td ${cellCls(r.mfr_si_diff)}>${signFmt(r.mfr_si_diff)}</td>
+    </tr>`).join('');
 }
 
 function renderTeamRounds(){
