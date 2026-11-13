@@ -422,14 +422,16 @@ app.post('/api/admin/opposition/:team', requireAdmin, wrap(async (req, res) => {
 // ── LEAGUE ANALYSIS API ──────────────────────────────────────────────────────
 
 app.get('/api/league/data', requireSiteAccess, wrap(async (req, res) => {
-  const data = await getLeagueData();
+  const season = parseSeason(req);
+  const data = await getLeagueData(season);
   res.json(data || {});
 }));
 
 app.post('/api/admin/league-upload', requireAdmin, upload.single('file'), wrap(async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const season = parseSeason(req);
   const data = parseLeagueExcel(req.file.buffer);
-  await setLeagueData(data);
+  await setLeagueData(data, season);
   res.json({ ok: true, teams: Object.keys(data.teams) });
 }));
 
@@ -540,20 +542,23 @@ app.post('/api/admin/debug-wl', requireAdmin, upload.single('file'), wrap(async 
 }));
 
 app.get('/api/league/rounds-data', requireSiteAccess, wrap(async (req, res) => {
-  const data = await getLeagueRoundsData();
+  const season = parseSeason(req);
+  const data = await getLeagueRoundsData(season);
   res.json(data || {});
 }));
 
 app.delete('/api/admin/league-rounds/:num', requireAdmin, wrap(async (req, res) => {
-  const data = await getLeagueRoundsData() || { rounds: {} };
+  const season = parseSeason(req);
+  const data = await getLeagueRoundsData(season) || { rounds: {} };
   delete data.rounds[req.params.num];
-  await setLeagueRoundsData(data);
+  await setLeagueRoundsData(data, season);
   res.json({ ok: true, rounds: Object.keys(data.rounds) });
 }));
 
 app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFiles', 20), wrap(async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'No files uploaded' });
-  const existing = await getLeagueRoundsData() || { rounds: {} };
+  const season = parseSeason(req);
+  const existing = await getLeagueRoundsData(season) || { rounds: {} };
   const results = [];
   for (const file of req.files) {
     const matchR = file.originalname.match(/R(\d+)/i);
@@ -572,7 +577,7 @@ app.post('/api/admin/league-rounds-upload', requireAdmin, upload.array('roundFil
       results.push({ file: file.originalname, error: e.message });
     }
   }
-  await setLeagueRoundsData(existing);
+  await setLeagueRoundsData(existing, season);
   res.json({ ok: true, results, rounds: Object.keys(existing.rounds).sort((a,b)=>a-b) });
 }));
 
@@ -599,6 +604,15 @@ async function runMigration() {
     }
     await client.close();
     const total = r1.modifiedCount + r2.modifiedCount + r3.modifiedCount + r4.modifiedCount;
+    // Migrate league data: copy data → data_2026, rounds → rounds_2026
+    const leagueData = await db.collection('league').findOne({ _id: 'data' });
+    if (leagueData && leagueData.data) {
+      await db.collection('league').updateOne({ _id: 'data_2026' }, { $setOnInsert: { data: leagueData.data, updated_at: new Date() } }, { upsert: true });
+    }
+    const leagueRounds = await db.collection('league').findOne({ _id: 'rounds' });
+    if (leagueRounds && leagueRounds.data) {
+      await db.collection('league').updateOne({ _id: 'rounds_2026' }, { $setOnInsert: { data: leagueRounds.data, updated_at: new Date() } }, { upsert: true });
+    }
     if (total > 0) console.log(`Season migration: tagged ${total} documents with season:2026`);
   } catch (e) {
     console.error('Season migration error:', e.message);

@@ -216,31 +216,35 @@ async function deleteRoundNote(id) {
 
 // ── LEAGUE ANALYSIS DATA ─────────────────────────────────────────────────────
 
-async function getLeagueData() {
+async function getLeagueData(season) {
   const database = await connect();
-  const doc = await database.collection('league').findOne({ _id: 'data' });
+  const id = season ? `data_${season}` : 'data';
+  const doc = await database.collection('league').findOne({ _id: id });
   return doc ? doc.data : null;
 }
 
-async function setLeagueData(data) {
+async function setLeagueData(data, season) {
   const database = await connect();
+  const id = season ? `data_${season}` : 'data';
   await database.collection('league').updateOne(
-    { _id: 'data' },
+    { _id: id },
     { $set: { data, updated_at: new Date() } },
     { upsert: true }
   );
 }
 
-async function getLeagueRoundsData() {
+async function getLeagueRoundsData(season) {
   const database = await connect();
-  const doc = await database.collection('league').findOne({ _id: 'rounds' });
+  const id = season ? `rounds_${season}` : 'rounds';
+  const doc = await database.collection('league').findOne({ _id: id });
   return doc ? doc.data : null;
 }
 
-async function setLeagueRoundsData(data) {
+async function setLeagueRoundsData(data, season) {
   const database = await connect();
+  const id = season ? `rounds_${season}` : 'rounds';
   await database.collection('league').updateOne(
-    { _id: 'rounds' },
+    { _id: id },
     { $set: { data, updated_at: new Date() } },
     { upsert: true }
   );

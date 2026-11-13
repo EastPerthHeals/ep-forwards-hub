@@ -828,6 +828,8 @@ function switchCoachesSeason(year, btn){
     btn.classList.add('active');
     document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
   }
+  coachesData = null;
+  loadCoachesDataIfNeeded(true);
 }
 
 function showCoachesPage(id, btn){
@@ -1187,14 +1189,20 @@ function cRankNum(ratingKey, val){
 }
 function ordinal(n){return n+(n===1?'st':n===2?'nd':n===3?'rd':'th');}
 
-async function loadCoachesDataIfNeeded(){
-  if(coachesData){renderAllCoaches();return;}
+async function loadCoachesDataIfNeeded(force){
+  if(coachesData && !force){renderAllCoaches();return;}
+  const s = coachesActiveSeason;
   const [data, rdata] = await Promise.all([
-    siteFetch('/api/league/data').then(r=>r.json()).catch(()=>null),
-    siteFetch('/api/league/rounds-data').then(r=>r.json()).catch(()=>null),
+    siteFetch('/api/league/data?season='+s).then(r=>r.json()).catch(()=>null),
+    siteFetch('/api/league/rounds-data?season='+s).then(r=>r.json()).catch(()=>null),
   ]);
   if(!data||!data.teams){
-    document.getElementById('coaches-ep-content').innerHTML='<p class="hint">No league data uploaded yet. Go to Admin → League Data to upload the spreadsheet.</p>';
+    const msg = s < ACTIVE_SEASON
+      ? '<p class="hint">No '+s+' league data found.</p>'
+      : '<p class="hint">No league data uploaded yet. Go to Admin → League Data to upload the spreadsheet.</p>';
+    document.getElementById('coaches-ep-content').innerHTML=msg;
+    document.getElementById('coaches-scout-content').innerHTML=msg;
+    document.getElementById('coaches-comp-content').innerHTML=msg;
     return;
   }
   coachesData=data;
