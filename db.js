@@ -219,7 +219,8 @@ async function deleteRoundNote(id) {
 async function getLeagueData(season) {
   const database = await connect();
   const id = season ? `data_${season}` : 'data';
-  const doc = await database.collection('league').findOne({ _id: id });
+  let doc = await database.collection('league').findOne({ _id: id });
+  if (!doc && season) doc = await database.collection('league').findOne({ _id: 'data' });
   return doc ? doc.data : null;
 }
 
@@ -236,7 +237,8 @@ async function setLeagueData(data, season) {
 async function getLeagueRoundsData(season) {
   const database = await connect();
   const id = season ? `rounds_${season}` : 'rounds';
-  const doc = await database.collection('league').findOne({ _id: id });
+  let doc = await database.collection('league').findOne({ _id: id });
+  if (!doc && season) doc = await database.collection('league').findOne({ _id: 'rounds' });
   return doc ? doc.data : null;
 }
 
