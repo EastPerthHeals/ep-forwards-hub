@@ -378,6 +378,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('season',this)">Season Tracker</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('analysis',this)">Analysis</button>
+  <button class="nav-btn" data-toptabs="Midfielders" onclick="showPage('mid-team',this)">Round by Round</button>
   <button class="nav-btn" data-toptabs="Midfielders" onclick="showPage('mfr',this)">MFR</button>
   <button class="nav-btn" data-toptabs="Forwards,Midfielders,Defenders" onclick="showPage('opposition',this)">Opposition</button>
 </div>
@@ -533,6 +534,12 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
       <div id="rawStatsOutput"></div>
     </div>
   </div>
+</div>
+
+<!-- MID ROUND BY ROUND -->
+<div id="page-mid-team" class="page">
+  <div class="round-tabs" id="midRoundTabs"></div>
+  <div id="midTeamContent"></div>
 </div>
 
 <!-- MFR -->
@@ -808,11 +815,10 @@ function showTopTab(name,btn){
     const tabs = (nb.dataset.toptabs||'').split(',');
     nb.style.display = tabs.includes(name) ? '' : 'none';
   });
-  const defaultPage = name==='Forwards' ? 'team' : name==='Midfielders' ? 'mfr' : 'opposition';
+  const defaultPage = name==='Forwards' ? 'team' : name==='Midfielders' ? 'mid-team' : 'opposition';
   const defaultBtn = [...document.querySelectorAll('#playersNav .nav-btn')]
     .find(nb=>nb.getAttribute('onclick').includes("'"+defaultPage+"'"));
   showPage(defaultPage, defaultBtn);
-  if(defaultPage==='mfr') loadMFRPage();
   if(defaultPage==='opposition') applyOppLineForTopTab();
 }
 
@@ -829,6 +835,7 @@ function showPage(n,b){
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
   if(n==='mfr') loadMFRPage();
+  if(n==='mid-team') renderMidRounds();
 }
 
 async function submitGDLock(){
@@ -1834,6 +1841,183 @@ function renderSeasonCharts(){
   const wlEl=document.getElementById('wlChart');
   const ex=Chart.getChart(wlEl);if(ex)ex.destroy();
   new Chart(wlEl,{type:'bar',data:{labels:['Wins (avg)','Losses (avg)','Target'],datasets:[{data:[avgW,avgL,195],backgroundColor:['#3b9e6e','#b03030','rgba(180,210,255,0.3)'],borderRadius:8}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#8899b4',font:{size:11}},grid:{color:'rgba(99,131,179,0.08)'},min:100,max:260},y:{ticks:{color:'#c0ccdc',font:{size:12}},grid:{display:false}}}}});
+}
+
+// ── MIDFIELDERS ROUND BY ROUND ───────────────────────────────────────────────
+const MID_RADAR_STATS = [
+  { key: 'mid_cbfp', label: 'CB 1st Poss' },
+  { key: 'mid_clr',  label: 'Clearances'  },
+  { key: 'mid_i50',  label: 'Inside 50s'  },
+  { key: 'mid_si',   label: 'Score Inv'   },
+  { key: 'mid_cp',   label: 'Cont Poss'   },
+  { key: 'mid_gbg',  label: 'GBG'         },
+];
+
+// Typical game maxima for normalising the radar axes
+const MID_RADAR_MAX = { mid_cbfp: 30, mid_clr: 40, mid_i50: 70, mid_si: 120, mid_cp: 70, mid_gbg: 55 };
+
+function renderMidRounds(){
+  const mfrRounds = allRounds.filter(r => r.mid_cbfp_ep !== undefined && r.mid_cbfp_ep !== null);
+  if(!mfrRounds.length){ document.getElementById('midTeamContent').innerHTML='<p class="hint" style="padding:20px">No midfield data loaded yet.</p>'; return; }
+  const lastIdx = mfrRounds.length - 1;
+  document.getElementById('midRoundTabs').innerHTML = mfrRounds.map((r,i)=>`<button class="round-tab${i===lastIdx?' active':''}" onclick="selectMidRound(${i},this)">${r.short}</button>`).join('');
+  renderMidRoundContent(lastIdx, mfrRounds);
+}
+
+function selectMidRound(i, btn){
+  document.querySelectorAll('#midRoundTabs .round-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderMidRoundContent(i, allRounds.filter(r=>r.mid_cbfp_ep!==undefined&&r.mid_cbfp_ep!==null));
+}
+
+function buildMidRadarSVG(r){
+  const cx=160, cy=145, maxR=110, n=MID_RADAR_STATS.length;
+  const angle = i => (Math.PI*2*i/n) - Math.PI/2;
+  const pt = (pct, i) => {
+    const a=angle(i), rad=pct*maxR;
+    return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad];
+  };
+  // Grid rings
+  let svg=`<svg viewBox="0 0 320 290" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:340px">`;
+  [0.25,0.5,0.75,1].forEach(frac=>{
+    const pts=MID_RADAR_STATS.map((_,i)=>pt(frac,i).join(','));
+    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(99,131,179,0.18)" stroke-width="1"/>`;
+  });
+  // Axes
+  MID_RADAR_STATS.forEach((_,i)=>{
+    const [x,y]=pt(1,i);
+    svg+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(99,131,179,0.25)" stroke-width="1"/>`;
+  });
+  // EP polygon
+  const epPts = MID_RADAR_STATS.map((s,i)=>{
+    const val = r[s.key+'_ep'] || 0;
+    const pct = Math.min(val / MID_RADAR_MAX[s.key], 1);
+    return pt(pct,i).join(',');
+  });
+  svg+=`<polygon points="${epPts.join(' ')}" fill="rgba(74,127,193,0.22)" stroke="#4a7fc1" stroke-width="2.5"/>`;
+  // Opp polygon
+  const oppPts = MID_RADAR_STATS.map((s,i)=>{
+    const val = r[s.key+'_opp'] || 0;
+    const pct = Math.min(val / MID_RADAR_MAX[s.key], 1);
+    return pt(pct,i).join(',');
+  });
+  svg+=`<polygon points="${oppPts.join(' ')}" fill="rgba(192,57,43,0.15)" stroke="#c0392b" stroke-width="2" stroke-dasharray="5,3"/>`;
+  // EP dots + opp dots
+  MID_RADAR_STATS.forEach((s,i)=>{
+    const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
+    const epPct=Math.min(epVal/MID_RADAR_MAX[s.key],1), oppPct=Math.min(oppVal/MID_RADAR_MAX[s.key],1);
+    const [ex,ey]=pt(epPct,i); const [ox,oy]=pt(oppPct,i);
+    svg+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="4" fill="#4a7fc1"/>`;
+    svg+=`<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="3.5" fill="#c0392b" opacity="0.85"/>`;
+  });
+  // Labels
+  MID_RADAR_STATS.forEach((s,i)=>{
+    const a=angle(i), lx=cx+Math.cos(a)*(maxR+22), ly=cy+Math.sin(a)*(maxR+22);
+    const anchor = Math.abs(Math.cos(a))<0.15 ? 'middle' : (Math.cos(a)<0 ? 'end' : 'start');
+    const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
+    const diff=epVal-oppVal; const diffCol=diff>0?'#4ecb8d':diff<0?'#e07070':'#8899b4';
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly-5).toFixed(1)}" text-anchor="${anchor}" fill="#8899b4" font-size="11" font-family="Segoe UI,sans-serif">${s.label}</text>`;
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly+9).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="12" font-family="Segoe UI,sans-serif" font-weight="700">${epVal} / ${oppVal}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+function renderMidRoundContent(idx, rounds){
+  const r = rounds[idx];
+  if(!r){ return; }
+  const wlCol = r.wl==='W' ? '#4ecb8d' : '#e07070';
+  const wlBg = r.wl==='W' ? 'rgba(59,158,110,0.2)' : 'rgba(192,57,43,0.2)';
+  const signFmt = v => (v>0?'+':'')+v;
+  const cellCol = v => v>0?'#4ecb8d':v<0?'#e07070':'var(--text-muted)';
+
+  // Header: MFR score
+  let h = `<div class="force-total"><div>
+    <div class="force-label">Midfield Force Rating — ${r.short} <span style="font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;background:${wlBg};color:${wlCol}">${r.wl==='W'?'WIN':'LOSS'}</span></div>
+    <div class="force-score" style="color:${r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)'}">${r.mfr>0?'+':''}${r.mfr}</div>
+    <div class="force-target">Benchmark: +12 (top-3 avg)</div>
+  </div></div>`;
+
+  // Radar + legend
+  h += `<div class="section-label" style="margin-bottom:8px">EP vs Opposition — Web Graph</div>`;
+  h += `<div style="display:flex;flex-direction:column;align-items:center;background:var(--bg-card2);border-radius:14px;padding:16px 8px 10px;margin-bottom:4px">`;
+  h += buildMidRadarSVG(r);
+  h += `</div>`;
+  h += `<div style="display:flex;gap:20px;justify-content:center;background:var(--bg-card2);border-radius:0 0 14px 14px;padding:8px 12px 12px;font-size:11px;color:var(--text-muted);margin-bottom:16px">
+    <span><span style="color:#4a7fc1">━━</span> East Perth</span>
+    <span><span style="color:#c0392b">╌╌</span> Opposition</span>
+    <span style="color:var(--text-muted)">Values shown: EP / Opp</span>
+  </div>`;
+
+  // Stat cards (6 stats)
+  h += `<div class="section-label" style="margin-bottom:12px">Midfield Stats — EP vs Opposition</div>`;
+  h += `<div class="metrics-grid">`;
+  MID_RADAR_STATS.forEach(s => {
+    const ep = r[s.key+'_ep'] ?? '—';
+    const opp = r[s.key+'_opp'] ?? '—';
+    const diff = (ep !== '—' && opp !== '—') ? ep - opp : null;
+    h += `<div class="metric-card">
+      <div class="metric-label">${s.label}</div>
+      <div class="metric-value" style="color:${diff!==null?cellCol(diff):'var(--text-muted)'}">${ep}</div>
+      <div class="metric-target">Opp: ${opp} &nbsp; Diff: <span style="color:${diff!==null?cellCol(diff):'var(--text-muted)'}">${diff!==null?signFmt(diff):'—'}</span></div>
+    </div>`;
+  });
+  // MFR component cards
+  const mfrStats = [
+    { label:'CBFP Diff', val: r.mfr_cbfp_diff },
+    { label:'Clr Diff ×2', val: r.mfr_clr_diff, weight:2 },
+    { label:'I50 Diff', val: r.mfr_i50_diff },
+    { label:'SI Diff ÷3', val: r.mfr_si_diff, div:3 },
+  ];
+  mfrStats.forEach(s => {
+    if(s.val === undefined || s.val === null) return;
+    const contrib = s.weight ? s.val*s.weight : s.div ? Math.round(s.val/s.div*10)/10 : s.val;
+    h += `<div class="metric-card">
+      <div class="metric-label">${s.label}</div>
+      <div class="metric-value" style="color:${cellCol(s.val)}">${signFmt(s.val)}</div>
+      <div class="metric-target">Contributes: <span style="color:${cellCol(contrib)}">${signFmt(contrib)}</span></div>
+    </div>`;
+  });
+  h += `</div>`;
+
+  // Notes
+  h += `<div class="section-label" style="margin-bottom:10px;margin-top:20px">Round Notes — ${r.short}</div>`
+    + `<div class="notes-box" style="border-color:var(--accent)">`
+    +   `<div class="opp-notes-list" id="midRoundNotesList"><p class="hint" style="margin:0">Loading...</p></div>`
+    +   `<div class="opp-note-form">`
+    +     `<input type="text" id="midRoundNoteAuthor" placeholder="Your name" maxlength="40">`
+    +     `<textarea id="midRoundNoteText" placeholder="Midfield notes for this round..." rows="2" maxlength="500"></textarea>`
+    +     `<button type="button" onclick="addMidRoundNote(${r.round_num})">Add Note</button>`
+    +   `</div>`
+    + `</div>`;
+
+  document.getElementById('midTeamContent').innerHTML = h;
+  loadMidRoundNotes(r.round_num);
+}
+
+async function loadMidRoundNotes(roundNum){
+  const list = document.getElementById('midRoundNotesList');
+  if(!list) return;
+  try{
+    const notes = await siteFetch('/api/round-notes/'+roundNum).then(r=>r.json());
+    list.innerHTML = (notes&&notes.length)
+      ? notes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
+      : '<p class="hint" style="margin:0">No notes yet.</p>';
+  }catch(e){ list.innerHTML='<p class="hint" style="margin:0">Could not load notes.</p>'; }
+}
+
+async function addMidRoundNote(roundNum){
+  const nameInput=document.getElementById('midRoundNoteAuthor');
+  const noteInput=document.getElementById('midRoundNoteText');
+  const author=nameInput.value.trim(), note=noteInput.value.trim();
+  if(!author||!note){ alert('Please enter your name and a note.'); return; }
+  try{
+    const saved=await siteFetch('/api/round-notes/'+roundNum,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({author,note})}).then(r=>r.json());
+    const list=document.getElementById('midRoundNotesList');
+    if(list.querySelector('.hint')) list.innerHTML='';
+    list.insertAdjacentHTML('beforeend','<div class="opp-note"><span class="opp-note-author">'+escapeHtml(saved.author)+':</span>'+escapeHtml(saved.note)+'</div>');
+    nameInput.value=''; noteInput.value='';
+  }catch(e){ alert('Could not save note.'); }
 }
 
 // ── MFR PAGE ─────────────────────────────────────────────────────────────────
