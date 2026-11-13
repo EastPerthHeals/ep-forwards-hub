@@ -47,11 +47,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
 .nav-btn{background:none;border:none;color:var(--text-muted);font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;padding:14px 16px;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.2s;font-family:var(--font)}
 .nav-btn:hover{color:var(--text-secondary)}
 .nav-btn.active{color:var(--accent-light);border-bottom-color:var(--accent)}
-.season-archive-btn{color:var(--text-muted)}
-.season-archive-btn.active{color:#c9a84c;border-bottom-color:#c9a84c}
-.season-divider{width:1px;height:20px;background:var(--border);flex-shrink:0;margin:0 6px}
-.readonly-banner{display:none;background:rgba(201,168,76,0.1);border-bottom:1px solid rgba(201,168,76,0.3);padding:6px 24px;font-size:11px;color:#c9a84c;letter-spacing:0.5px;position:sticky;top:148px;z-index:98}
-.readonly-banner.visible{display:block}
 .page{display:none;padding:20px 24px;max-width:1200px;margin:0 auto}
 .page.active{display:block}
 .section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent-light);margin-bottom:12px}
@@ -358,10 +353,7 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="toptab-btn" data-toptab="Midfielders" onclick="showTopTab('Midfielders',this)">Midfielders</button>
   <button class="toptab-btn" data-toptab="Defenders" onclick="showTopTab('Defenders',this)">Defenders</button>
 </div>
-<div class="readonly-banner" id="readonlyBanner">2026 Season — Read Only</div>
 <div class="nav" id="playersNav" style="top:148px">
-  <button class="nav-btn season-archive-btn" id="nav-2026" data-toptabs="Forwards,Midfielders,Defenders" onclick="switchSeason(2026,this)">2026</button>
-  <div class="season-divider" style="height:16px;margin:0 4px 0 2px"></div>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('kpi',this)">KPI Targets</button>
   <button class="nav-btn active" data-toptabs="Forwards" onclick="showPage('team',this)">Round by Round</button>
   <button class="nav-btn" data-toptabs="Forwards" onclick="showPage('season',this)">Season Tracker</button>
@@ -369,8 +361,6 @@ body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png')
   <button class="nav-btn" data-toptabs="Forwards,Midfielders,Defenders" onclick="showPage('opposition',this)">Opposition</button>
 </div>
 <div class="nav" id="coachesNav" style="display:none;top:104px">
-  <button class="nav-btn season-archive-btn" id="coaches-nav-2026" onclick="switchCoachesSeason(2026,this)">2026</button>
-  <div class="season-divider" style="height:16px;margin:0 4px 0 2px"></div>
   <button class="nav-btn active" onclick="showCoachesPage('ep',this)">EP Report</button>
   <button class="nav-btn" onclick="showCoachesPage('scout',this)">Opponent Scout</button>
   <button class="nav-btn" onclick="showCoachesPage('comp',this)">Competition</button>
@@ -554,10 +544,6 @@ const SITE_PW_KEY = 'ep_site_password';
 function siteFetch(url, opts={}){
   const pw = localStorage.getItem(SITE_PW_KEY) || '';
   opts.headers = Object.assign({}, opts.headers, {'x-site-password': pw});
-  // Append season to all /api/ calls (except login/gameday/league/admin)
-  if (url.startsWith('/api/') && !/\/(site-login|coaches-login|gameday-login|gameday|admin|league)/.test(url)) {
-    url += (url.includes('?') ? '&' : '?') + 'season=' + activeSeason;
-  }
   return fetch(url, opts).then(r=>{
     if(r.status===401){ showLock('Session expired — please re-enter the password.'); throw new Error('locked'); }
     return r;
@@ -684,24 +670,7 @@ function renderGD(){const ql=['Quarter 1','Quarter 2','Quarter 3','Quarter 4'];c
 const GD_PW_KEY = 'ep_gd_unlocked';
 const COACHES_PW_KEY = 'ep_coaches_unlocked';
 let currentTopTab = 'Forwards';
-let activeSeason = 2027;
-const ACTIVE_SEASON = 2027;
 const TOPTAB_OPP_LINE = {Forwards:'Defenders', Midfielders:'Midfielders', Defenders:'Forwards'};
-
-function switchSeason(year, btn) {
-  // Toggle: clicking 2026 again returns to 2027
-  if (activeSeason === year) {
-    activeSeason = ACTIVE_SEASON;
-    btn.classList.remove('active');
-    document.getElementById('readonlyBanner').classList.remove('visible');
-    loadData();
-    return;
-  }
-  activeSeason = year;
-  btn.classList.add('active');
-  document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
-  loadData();
-}
 
 function showSuperTab(name, btn){
   document.querySelectorAll('#superTabs .toptab-btn').forEach(b=>b.classList.remove('active'));
@@ -769,11 +738,9 @@ function applyOppLineForTopTab(){
 
 function showPage(n,b){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('#playersNav .nav-btn:not(.season-archive-btn)').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
-  // If in 2026 mode, reload data for the new sub-tab (season stays)
-  if(activeSeason !== ACTIVE_SEASON) loadData();
 }
 
 async function submitGDLock(){
@@ -816,28 +783,9 @@ async function submitCoachesLock(){
   }
 }
 
-let coachesActiveSeason = ACTIVE_SEASON;
-
-function switchCoachesSeason(year, btn){
-  if(coachesActiveSeason === year){
-    coachesActiveSeason = ACTIVE_SEASON;
-    btn.classList.remove('active');
-    document.getElementById('readonlyBanner').classList.remove('visible');
-  } else {
-    coachesActiveSeason = year;
-    btn.classList.add('active');
-    document.getElementById('readonlyBanner').classList.toggle('visible', year < ACTIVE_SEASON);
-  }
-  coachesData = null;
-  ['coaches-ep-content','coaches-scout-content','coaches-comp-content'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.innerHTML='';
-  });
-  loadCoachesDataIfNeeded(true);
-}
-
 function showCoachesPage(id, btn){
   document.querySelectorAll('.coaches-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('#coachesNav .nav-btn:not(.season-archive-btn)').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#coachesNav .nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('coaches-tab-'+id).classList.add('active');
   btn.classList.add('active');
   if(id==='rawstats') initRawStatsTab();
@@ -1192,20 +1140,14 @@ function cRankNum(ratingKey, val){
 }
 function ordinal(n){return n+(n===1?'st':n===2?'nd':n===3?'rd':'th');}
 
-async function loadCoachesDataIfNeeded(force){
-  if(coachesData && !force){renderAllCoaches();return;}
-  const s = coachesActiveSeason;
+async function loadCoachesDataIfNeeded(){
+  if(coachesData){renderAllCoaches();return;}
   const [data, rdata] = await Promise.all([
-    siteFetch('/api/league/data?season='+s).then(r=>r.json()).catch(()=>null),
-    siteFetch('/api/league/rounds-data?season='+s).then(r=>r.json()).catch(()=>null),
+    siteFetch('/api/league/data').then(r=>r.json()).catch(()=>null),
+    siteFetch('/api/league/rounds-data').then(r=>r.json()).catch(()=>null),
   ]);
   if(!data||!data.teams){
-    const msg = s < ACTIVE_SEASON
-      ? '<p class="hint">No '+s+' league data found.</p>'
-      : '<p class="hint">No league data uploaded yet. Go to Admin → League Data to upload the spreadsheet.</p>';
-    document.getElementById('coaches-ep-content').innerHTML=msg;
-    document.getElementById('coaches-scout-content').innerHTML=msg;
-    document.getElementById('coaches-comp-content').innerHTML=msg;
+    document.getElementById('coaches-ep-content').innerHTML='<p class="hint">No league data uploaded yet. Go to Admin → League Data to upload the spreadsheet.</p>';
     return;
   }
   coachesData=data;
@@ -1700,31 +1642,12 @@ function renderCoachesComp(){renderCompContent();}
 let allRounds=[];
 let seasonChart=null, wlChart=null, kpiChart=null;
 
-let _loadSeq = 0;
-
-function clearPlayersContent(){
-  document.getElementById('seasonSummaryGrid').innerHTML='';
-  document.getElementById('metricTabBar').innerHTML='';
-  document.getElementById('metricAvgGrid').innerHTML='';
-  const head=document.getElementById('metricTableHead'); if(head) head.innerHTML='';
-  const body=document.getElementById('metricTableBody'); if(body) body.innerHTML='';
-  document.getElementById('teamRoundTabs').innerHTML='';
-  document.getElementById('teamContent').innerHTML='';
-  const intro=document.getElementById('analysisIntro'); if(intro) intro.textContent='';
-  const atbody=document.getElementById('analysisTableBody'); if(atbody) atbody.innerHTML='';
-  const takes=document.getElementById('analysisTakeaways'); if(takes) takes.innerHTML='';
-  ['seasonChart','kpiChart','wlChart'].forEach(id=>{const el=document.getElementById(id);if(el){const ex=Chart.getChart(el);if(ex)ex.destroy();}});
-}
-
 async function loadData(){
-  const seq = ++_loadSeq;
-  clearPlayersContent();
   let visSettings;
   [allRounds, visSettings] = await Promise.all([
     siteFetch('/api/rounds').then(r=>r.json()),
     siteFetch('/api/analysis-settings').then(r=>r.json()).catch(()=>({visible:[]}))
   ]);
-  if(seq !== _loadSeq) return; // a newer load started, discard this one
   analysisVisibleKeys = (visSettings && Array.isArray(visSettings.visible)) ? visSettings.visible : [];
   renderGD();
   renderSeasonSummary();
@@ -1741,12 +1664,7 @@ function renderSeasonSummary(){
   const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
   const forces=playedRounds.map(r=>r.force_avg);
   const wls=allRounds.map(r=>r.wl);
-  if(!forces.length){
-    document.getElementById('seasonSummaryGrid').innerHTML='';
-    document.getElementById('metricTabBar').innerHTML='';
-    document.getElementById('metricAvgGrid').innerHTML='';
-    return;
-  }
+  if(!forces.length){document.getElementById('seasonSummaryGrid').innerHTML='';return;}
   const avg=Math.round(forces.reduce((a,b)=>a+b,0)/forces.length);
   const best=Math.max(...forces);
   const bestRd=playedRounds[forces.indexOf(best)];
@@ -1780,9 +1698,6 @@ function renderSeasonSummary(){
 }
 
 function renderMetricTable(){
-  const head=document.getElementById('metricTableHead');
-  const body=document.getElementById('metricTableBody');
-  if(!allRounds.length){ if(head) head.innerHTML=''; if(body) body.innerHTML=''; return; }
   const metricKeys=[
     {label:'Inside 50s',col:'i50',key:'i50',target:12},
     {label:'% Scores I50',col:'pct_scores_i50',key:'scoresI50',target:50},
@@ -1791,6 +1706,8 @@ function renderMetricTable(){
     {label:'% Marks I50',col:'pct_marks_i50',key:'marksI50',target:24},
     {label:'% Oppo R50',col:'pct_oppo_r50',key:'oppoR50',target:25},
   ];
+  const head=document.getElementById('metricTableHead');
+  const body=document.getElementById('metricTableBody');
   head.innerHTML='<tr><th>Metric</th><th>Target</th>'+allRounds.map(r=>'<th>'+r.short+'</th>').join('')+'<th>Season avg</th></tr>';
   let h='';
   metricKeys.forEach(m=>{
@@ -1810,10 +1727,6 @@ function renderMetricTable(){
 }
 
 function renderSeasonCharts(){
-  if(!allRounds.length){
-    ['seasonChart','kpiChart','wlChart'].forEach(id=>{const el=document.getElementById(id);if(el){const ex=Chart.getChart(el);if(ex)ex.destroy();}});
-    return;
-  }
   const playedRounds=allRounds.filter(r=>r.force_avg!==null&&r.force_avg!==undefined);
   const forces=playedRounds.map(r=>r.force_avg);
   const labels=playedRounds.map(r=>r.short);
@@ -1838,8 +1751,7 @@ function renderSeasonCharts(){
 function renderTeamRounds(){
   const lastIdx = allRounds.length-1;
   document.getElementById('teamRoundTabs').innerHTML=allRounds.map((r,i)=>'<button class="round-tab '+(i===lastIdx?'active':'')+'" onclick="selectRound('+i+',this)">'+r.short+'</button>').join('');
-  if(allRounds.length) renderTeamContent(lastIdx);
-  else document.getElementById('teamContent').innerHTML='<p class="hint" style="margin-top:24px">No round data for this season yet.</p>';
+  if(allRounds.length)renderTeamContent(lastIdx);
 }
 function selectRound(i,b){document.querySelectorAll('.round-tab').forEach(t=>t.classList.remove('active'));b.classList.add('active');renderTeamContent(i);}
 
@@ -2137,11 +2049,11 @@ async function loadOppositionPage(){
       + '<div class="opp-notes">'
       +   '<div class="opp-notes-title">Player Notes</div>'
       +   '<div class="opp-notes-list">'+notesList+'</div>'
-      +   (activeSeason >= ACTIVE_SEASON ? '<div class="opp-note-form">'
+      +   '<div class="opp-note-form">'
       +     '<input type="text" placeholder="Your name" maxlength="40">'
       +     '<textarea placeholder="E.g. felt comfortable to beat him on a lead, but 1 v 1 he is too strong, so don\'t engage in the wrestle." rows="2" maxlength="500"></textarea>'
       +     '<button type="button" onclick="addOppNote(this,\''+team.replace(/'/g,"\\'")+'\',\''+p.name.replace(/'/g,"\\'")+'\')">Add Note</button>'
-      +   '</div>' : '')
+      +   '</div>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -2212,11 +2124,11 @@ function renderTeamContent(i){
   h+='<div class="section-label" style="margin-bottom:10px;margin-top:20px">Opposition Notes — '+r.label+'</div>'
     +'<div class="notes-box" style="border-color:var(--accent)">'
     +  '<div class="opp-notes-list" id="roundNotesList"><p class="hint" style="margin:0">Loading...</p></div>'
-    +  (activeSeason >= ACTIVE_SEASON ? '<div class="opp-note-form">'
+    +  '<div class="opp-note-form">'
     +    '<input type="text" id="roundNoteAuthor" placeholder="Your name" maxlength="40">'
     +    '<textarea id="roundNoteText" placeholder="What did you think and feel about the opposition this round?" rows="2" maxlength="500"></textarea>'
     +    '<button type="button" onclick="addRoundNote('+r.round_num+')">Add Note</button>'
-    +  '</div>' : '')
+    +  '</div>'
     +'</div>';
 
   document.getElementById('teamContent').innerHTML=h;
