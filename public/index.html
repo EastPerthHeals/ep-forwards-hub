@@ -1932,7 +1932,8 @@ function buildMidRadarSVG(r){
     const anchor = Math.abs(Math.cos(a))<0.2 ? 'middle' : (Math.cos(a)<0 ? 'end' : 'start');
     const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
     const diff=epVal-oppVal;
-    const diffCol=diff>0?'#16a34a':diff<0?'#dc2626':'#6b7280';
+    const goodPos = !s.lowerBetter;
+    const diffCol=(goodPos?diff>0:diff<0)?'#16a34a':(goodPos?diff<0:diff>0)?'#dc2626':'#6b7280';
     svg+=`<text x="${lx.toFixed(1)}" y="${(ly-6).toFixed(1)}" text-anchor="${anchor}" fill="#374151" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="600">${s.label}</text>`;
     svg+=`<text x="${lx.toFixed(1)}" y="${(ly+11).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="800">${epVal} / ${oppVal}</text>`;
   });
@@ -1946,7 +1947,7 @@ function renderMidRoundContent(idx, rounds){
   const wlCol = r.wl==='W' ? '#4ecb8d' : '#e07070';
   const wlBg = r.wl==='W' ? 'rgba(59,158,110,0.2)' : 'rgba(192,57,43,0.2)';
   const signFmt = v => (v>0?'+':'')+v;
-  const cellCol = v => v>0?'#4ecb8d':v<0?'#e07070':'var(--text-muted)';
+  const cellCol = (v, lowerBetter) => { const good=lowerBetter?v<0:v>0, bad=lowerBetter?v>0:v<0; return good?'#4ecb8d':bad?'#e07070':'var(--text-muted)'; };
   const mfrCol = r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)';
 
   const SUBTEXT = '#6b7280', MAINTEXT = '#111827';
@@ -2015,7 +2016,7 @@ function renderMidRoundContent(idx, rounds){
     h += `<div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
         <span style="font-size:0.95rem;font-weight:700;color:${MAINTEXT}">${s.barLabel}${weightNote}</span>
-        <span style="font-size:0.95rem;font-weight:800;color:${diff!==null?cellCol(diff):SUBTEXT}">${diff!==null?signFmt(diff):'—'}</span>
+        <span style="font-size:0.95rem;font-weight:800;color:${diff!==null?cellCol(diff,s.lowerBetter):SUBTEXT}">${diff!==null?signFmt(diff):'—'}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <span style="font-size:12px;color:#003087;font-weight:700;width:26px;text-align:right;flex-shrink:0">EP</span>
@@ -2170,7 +2171,7 @@ function renderMFRPage(rounds){
 
   // Table
   const signFmt = v => (v>0?'+':'')+v;
-  const cellCls = v => v>0?'style="color:#3b9e6e"':v<0?'style="color:#b03030"':'';
+  const cellCls = (v, lowerBetter) => { const good=lowerBetter?v<0:v>0, bad=lowerBetter?v>0:v<0; return good?'style="color:#3b9e6e"':bad?'style="color:#b03030"':''; };
   document.getElementById('mfrTableBody').innerHTML = rounds.map(r=>`
     <tr>
       <td>${r.short}</td>
