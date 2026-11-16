@@ -9,7 +9,7 @@ const BASE_URL = process.argv[4] || 'http://localhost:3000';
 
 const files = fs.readdirSync(dir).filter(f => f.endsWith('.xlsx')).sort();
 const ALL = ['Claremont','East Fremantle','East Perth','Peel Thunder','Perth','South Fremantle','Subiaco','Swan Districts','West Coast Eagles','West Perth'];
-const STATS = ['Centre Bounce First Possession','Clearance','Inside 50','Score Involvement','Contested Possession','Ground Ball Get','Points'];
+const STATS = ['Centre Bounce First Possession','Clearance','Inside 50','Score Involvement','Contested Possession','Ground Ball Get','Turnover','Points'];
 
 const hdrs = { 'Content-Type': 'application/json', 'x-admin-token': ADMIN_TOKEN };
 
@@ -67,11 +67,12 @@ async function main() {
     const si_diff   = gFor[ep]['Score Involvement'] - gAgainst[ep]['Score Involvement'];
     const cp_diff   = gFor[ep]['Contested Possession'] - gAgainst[ep]['Contested Possession'];
     const gbg_diff  = gFor[ep]['Ground Ball Get'] - gAgainst[ep]['Ground Ball Get'];
-    const mfr       = Math.round((cbfp_diff + clr_diff * 2 + i50_diff + si_diff / 3) * 10) / 10;
+    const to_diff   = gFor[ep]['Turnover'] - gAgainst[ep]['Turnover'];
+    const mfr       = Math.round((clr_diff * 2 + i50_diff + cp_diff + si_diff / 3 + to_diff * -1) * 10) / 10;
     const won       = gFor[ep]['Points'] > gAgainst[ep]['Points'];
 
     rounds.push({
-      roundNum, cbfp_diff, clr_diff, i50_diff, si_diff, cp_diff, gbg_diff, mfr, won, file,
+      roundNum, cbfp_diff, clr_diff, i50_diff, si_diff, cp_diff, gbg_diff, to_diff, mfr, won, file,
       // raw values for radar chart
       mid_cbfp_ep: gFor[ep]['Centre Bounce First Possession'],
       mid_cbfp_opp: gAgainst[ep]['Centre Bounce First Possession'],
@@ -85,6 +86,8 @@ async function main() {
       mid_cp_opp: gAgainst[ep]['Contested Possession'],
       mid_gbg_ep: gFor[ep]['Ground Ball Get'],
       mid_gbg_opp: gAgainst[ep]['Ground Ball Get'],
+      mid_to_ep: gFor[ep]['Turnover'],
+      mid_to_opp: gAgainst[ep]['Turnover'],
     });
   }
 
@@ -98,6 +101,7 @@ async function main() {
       mfr_si_diff: r.si_diff,
       mfr_cp_diff: r.cp_diff,
       mfr_gbg_diff: r.gbg_diff,
+      mfr_to_diff: r.to_diff,
       mfr: r.mfr,
       mid_cbfp_ep: r.mid_cbfp_ep, mid_cbfp_opp: r.mid_cbfp_opp,
       mid_clr_ep: r.mid_clr_ep, mid_clr_opp: r.mid_clr_opp,
@@ -105,6 +109,7 @@ async function main() {
       mid_si_ep: r.mid_si_ep, mid_si_opp: r.mid_si_opp,
       mid_cp_ep: r.mid_cp_ep, mid_cp_opp: r.mid_cp_opp,
       mid_gbg_ep: r.mid_gbg_ep, mid_gbg_opp: r.mid_gbg_opp,
+      mid_to_ep: r.mid_to_ep, mid_to_opp: r.mid_to_opp,
     };
     // Try PATCH first (round exists), then POST if 404
     let res = await patch(r.roundNum, payload);

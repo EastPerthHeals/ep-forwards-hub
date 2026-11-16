@@ -559,7 +559,7 @@ body.page-white .hint{color:#6b7280;}
 <!-- MFR -->
 <div id="page-mfr" class="page">
   <p class="section-label" style="margin-bottom:4px">Midfield Force Rating &mdash; 2026 Season</p>
-  <p class="hint" style="margin-bottom:12px">MFR = CBFP Diff + (Clearances Diff &times; 2) + I50 Diff + (Score Involvements Diff &divide; 3)</p>
+  <p class="hint" style="margin-bottom:12px">MFR = (Clearances Diff &times; 2) + I50 Diff + Cont Poss Diff + (Score Inv Diff &divide; 3) + (Turnovers Diff &times; &minus;1)</p>
   <div class="colour-legend" style="margin-bottom:14px">
     <div class="cl-item"><div class="cl-dot" style="background:#3b9e6e"></div>Win</div>
     <div class="cl-item"><div class="cl-dot" style="background:#b03030"></div>Loss</div>
@@ -572,10 +572,10 @@ body.page-white .hint{color:#6b7280;}
       <thead><tr>
         <th>Round</th><th>W/L</th>
         <th>MFR</th>
-        <th>CBFP Diff</th>
         <th>Clr Diff</th>
         <th>I50 Diff</th>
-        <th>SI Diff</th>
+        <th>CP Diff</th>
+        <th>TO Diff</th>
       </tr></thead>
       <tbody id="mfrTableBody"></tbody>
     </table>
@@ -1860,19 +1860,18 @@ function renderSeasonCharts(){
 
 // ── MIDFIELDERS ROUND BY ROUND ───────────────────────────────────────────────
 const MID_RADAR_STATS = [
-  { key: 'mid_cbfp', label: 'CB 1st Poss',          barLabel: 'CB First Possession',    diffKey: 'mfr_cbfp_diff' },
   { key: 'mid_clr',  label: 'Clearances',            barLabel: 'Clearances',             diffKey: 'mfr_clr_diff',  weight: 2 },
   { key: 'mid_i50',  label: 'Inside 50s',            barLabel: 'Inside 50s',             diffKey: 'mfr_i50_diff' },
+  { key: 'mid_cp',   label: 'Cont Poss',             barLabel: 'Contested Possessions',  diffKey: 'mfr_cp_diff' },
   { key: 'mid_si',   label: 'Score Inv',             barLabel: 'Score Involvement',      diffKey: 'mfr_si_diff',   div: 3 },
-  { key: 'mid_cp',   label: 'Cont Poss',             barLabel: 'Contested Possessions' },
-  { key: 'mid_gbg',  label: "GBG's",                  barLabel: 'Ground Ball Gets' },
+  { key: 'mid_to',   label: 'Turnovers',             barLabel: 'Turnovers',              diffKey: 'mfr_to_diff',   lowerBetter: true },
 ];
 
 // Typical game maxima for normalising the radar axes
-const MID_RADAR_MAX = { mid_cbfp: 30, mid_clr: 40, mid_i50: 70, mid_si: 120, mid_cp: 70, mid_gbg: 55 };
+const MID_RADAR_MAX = { mid_clr: 40, mid_i50: 70, mid_cp: 70, mid_si: 120, mid_to: 60 };
 
 function renderMidRounds(){
-  const mfrRounds = allRounds.filter(r => r.mid_cbfp_ep !== undefined && r.mid_cbfp_ep !== null);
+  const mfrRounds = allRounds.filter(r => r.mid_clr_ep !== undefined && r.mid_clr_ep !== null);
   if(!mfrRounds.length){ document.getElementById('midTeamContent').innerHTML='<p class="hint" style="padding:20px">No midfield data loaded yet.</p>'; return; }
   const lastIdx = mfrRounds.length - 1;
   document.getElementById('midRoundTabs').innerHTML = mfrRounds.map((r,i)=>`<button class="round-tab${i===lastIdx?' active':''}" onclick="selectMidRound(${i},this)" style="display:flex;flex-direction:column;align-items:center;line-height:1.2;padding:7px 10px"><span>${r.short}</span>${r.opponent?`<span style="font-size:9px;opacity:0.7;white-space:nowrap;overflow:hidden;max-width:60px;text-overflow:ellipsis">${r.opponent.replace('East Fremantle','E.Frem').replace('South Fremantle','S.Frem').replace('Swan Districts','Swan Dst').replace('West Coast Eagles','WCE').replace('Peel Thunder','Peel').replace('West Perth','W.Perth')}</span>`:''}</button>`).join('');
@@ -1882,7 +1881,7 @@ function renderMidRounds(){
 function selectMidRound(i, btn){
   document.querySelectorAll('#midRoundTabs .round-tab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  renderMidRoundContent(i, allRounds.filter(r=>r.mid_cbfp_ep!==undefined&&r.mid_cbfp_ep!==null));
+  renderMidRoundContent(i, allRounds.filter(r=>r.mid_clr_ep!==undefined&&r.mid_clr_ep!==null));
 }
 
 function buildMidRadarSVG(r){
@@ -1955,8 +1954,8 @@ function renderMidRoundContent(idx, rounds){
   // MFR formula bar — no card, just text on the page
   let h = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb">
     <span style="font-size:11px;font-weight:800;letter-spacing:0.1em;color:#003087;text-transform:uppercase">MFR Formula</span>
-    <span style="font-size:0.95rem;color:${MAINTEXT};font-weight:600">CB First Poss + (Clearances <span style="color:#003087">×2</span>) + Inside 50s + (Score Inv <span style="color:#003087">÷3</span>)</span>
-    <span style="margin-left:auto;font-size:0.88rem;color:${SUBTEXT}">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></span>
+    <span style="font-size:0.95rem;color:${MAINTEXT};font-weight:600">(Clearances <span style="color:#003087">×2</span>) + Inside 50s + Cont Poss + (Score Inv <span style="color:#003087">÷3</span>) + (Turnovers <span style="color:#003087">×−1</span>)</span>
+    <span style="margin-left:auto;font-size:0.88rem;color:${SUBTEXT}">Top-3 benchmark: <strong style="color:${MAINTEXT}">+21</strong></span>
   </div>`;
 
   // Header — no card, just on the page
@@ -2177,9 +2176,10 @@ function renderMFRPage(rounds){
       <td>${r.short}</td>
       <td style="color:${r.wl==='W'?'#3b9e6e':'#b03030'};font-weight:600">${r.wl}</td>
       <td ${cellCls(r.mfr)}><strong>${signFmt(r.mfr)}</strong></td>
-      <td ${cellCls(r.mfr_cbfp_diff)}>${signFmt(r.mfr_cbfp_diff)}</td>
       <td ${cellCls(r.mfr_clr_diff)}>${signFmt(r.mfr_clr_diff)}</td>
       <td ${cellCls(r.mfr_i50_diff)}>${signFmt(r.mfr_i50_diff)}</td>
+      <td ${cellCls(r.mfr_cp_diff)}>${signFmt(r.mfr_cp_diff)}</td>
+      <td ${cellCls(r.mfr_to_diff,true)}>${signFmt(r.mfr_to_diff)}</td>
       <td ${cellCls(r.mfr_si_diff)}>${signFmt(r.mfr_si_diff)}</td>
     </tr>`).join('');
 }
