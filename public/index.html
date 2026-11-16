@@ -563,7 +563,7 @@ body.page-white .hint{color:#6b7280;}
   <div class="colour-legend" style="margin-bottom:14px">
     <div class="cl-item"><div class="cl-dot" style="background:#3b9e6e"></div>Win</div>
     <div class="cl-item"><div class="cl-dot" style="background:#b03030"></div>Loss</div>
-    <div class="cl-item"><div class="cl-dot" style="background:rgba(180,180,255,0.5);border:1px dashed rgba(180,180,255,0.6)"></div>Top-3 benchmark (+12)</div>
+    <div class="cl-item"><div class="cl-dot" style="background:rgba(180,180,255,0.5);border:1px dashed rgba(180,180,255,0.6)"></div>Top-3 benchmark (+21)</div>
   </div>
   <div class="chart-wrapper" style="height:220px;margin-bottom:20px"><canvas id="mfrChart"></canvas></div>
   <div class="mfr-summary-row" id="mfrSummaryRow" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap"></div>
@@ -1885,57 +1885,60 @@ function selectMidRound(i, btn){
 }
 
 function buildMidRadarSVG(r){
-  // Larger canvas with generous padding so labels never clip
+  // Differential radar — centre = 0 (even), outer = EP dominating
+  // Max differential scale per stat (based on 2026 season range)
+  const DIFF_MAX = { mid_clr:20, mid_i50:25, mid_cp:30, mid_si:90, mid_to:20 };
   const cx=200, cy=190, maxR=130, n=MID_RADAR_STATS.length;
   const angle = i => (Math.PI*2*i/n) - Math.PI/2;
+  // pct: 0.5 = centre (even), 1.0 = max positive, 0.0 = max negative
   const pt = (pct, i) => {
-    const a=angle(i), rad=pct*maxR;
+    const a=angle(i), rad=Math.max(0,Math.min(1,pct))*maxR;
     return [cx+Math.cos(a)*rad, cy+Math.sin(a)*rad];
   };
-  // viewBox: 400 wide, 380 tall — room for labels on all 6 sides
+  const getDiffPct = (s) => {
+    let diff = (r[s.key+'_ep']||0) - (r[s.key+'_opp']||0);
+    if(s.lowerBetter) diff = -diff;
+    return 0.5 + diff/(2*DIFF_MAX[s.key]);
+  };
   let svg=`<svg viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">`;
-  // Grid rings — no background, bolder lines
+  // Grid rings — 0.25, 0.5 (EVEN line), 0.75, 1.0
   [0.25,0.5,0.75,1].forEach(frac=>{
     const pts=MID_RADAR_STATS.map((_,i)=>pt(frac,i).join(','));
-    const opacity = frac===1 ? 0.6 : 0.25;
-    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(0,48,135,${opacity})" stroke-width="${frac===1?2.5:1.5}"/>`;
+    const isEven = frac===0.5;
+    const opacity = isEven ? 0.75 : frac===1 ? 0.55 : 0.2;
+    const width = isEven ? 2.5 : frac===1 ? 2 : 1.2;
+    const dash = isEven ? 'stroke-dasharray="5,3"' : '';
+    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(0,48,135,${opacity})" stroke-width="${width}" ${dash}/>`;
   });
+  // "EVEN" label near the even ring
+  const evenLabelPt = pt(0.5, 0);
+  svg+=`<text x="${(evenLabelPt[0]+6).toFixed(1)}" y="${(evenLabelPt[1]-6).toFixed(1)}" fill="rgba(0,48,135,0.5)" font-size="9" font-family="Segoe UI,Arial,sans-serif" font-weight="700" letter-spacing="1">EVEN</text>`;
   // Axes
   MID_RADAR_STATS.forEach((_,i)=>{
     const [x,y]=pt(1,i);
-    svg+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(0,48,135,0.2)" stroke-width="1.2"/>`;
+    svg+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(0,48,135,0.15)" stroke-width="1.2"/>`;
   });
-  // Opp polygon (behind EP)
-  const oppPts = MID_RADAR_STATS.map((s,i)=>{
-    const val = r[s.key+'_opp'] || 0;
-    return pt(Math.min(val/MID_RADAR_MAX[s.key],1),i).join(',');
-  });
-  svg+=`<polygon points="${oppPts.join(' ')}" fill="rgba(192,57,43,0.12)" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="6,4"/>`;
-  // EP polygon
-  const epPts = MID_RADAR_STATS.map((s,i)=>{
-    const val = r[s.key+'_ep'] || 0;
-    return pt(Math.min(val/MID_RADAR_MAX[s.key],1),i).join(',');
-  });
+  // EP differential polygon
+  const epPts = MID_RADAR_STATS.map((s,i)=>pt(getDiffPct(s),i).join(','));
   svg+=`<polygon points="${epPts.join(' ')}" fill="rgba(0,48,135,0.18)" stroke="#003087" stroke-width="3"/>`;
-  // Dots
+  // Dots — blue if winning stat, red if losing
   MID_RADAR_STATS.forEach((s,i)=>{
-    const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
-    const [ex,ey]=pt(Math.min(epVal/MID_RADAR_MAX[s.key],1),i);
-    const [ox,oy]=pt(Math.min(oppVal/MID_RADAR_MAX[s.key],1),i);
-    svg+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="#003087"/>`;
-    svg+=`<circle cx="${ox.toFixed(1)}" cy="${oy.toFixed(1)}" r="4.5" fill="#c0392b" opacity="0.9"/>`;
+    const pct=getDiffPct(s);
+    const [ex,ey]=pt(pct,i);
+    const dotCol = pct>=0.5 ? '#003087' : '#c0392b';
+    svg+=`<circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="5" fill="${dotCol}"/>`;
   });
-  // Labels — positioned further out to avoid clipping
+  // Labels — stat name + diff value in colour
   MID_RADAR_STATS.forEach((s,i)=>{
     const a=angle(i);
     const lx=cx+Math.cos(a)*(maxR+34), ly=cy+Math.sin(a)*(maxR+34);
     const anchor = Math.abs(Math.cos(a))<0.2 ? 'middle' : (Math.cos(a)<0 ? 'end' : 'start');
-    const epVal=r[s.key+'_ep']||0, oppVal=r[s.key+'_opp']||0;
-    const diff=epVal-oppVal;
-    const goodPos = !s.lowerBetter;
+    const diff=(r[s.key+'_ep']||0)-(r[s.key+'_opp']||0);
+    const goodPos=!s.lowerBetter;
     const diffCol=(goodPos?diff>0:diff<0)?'#16a34a':(goodPos?diff<0:diff>0)?'#dc2626':'#6b7280';
+    const sign=diff>0?'+':'';
     svg+=`<text x="${lx.toFixed(1)}" y="${(ly-6).toFixed(1)}" text-anchor="${anchor}" fill="#374151" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="600">${s.label}</text>`;
-    svg+=`<text x="${lx.toFixed(1)}" y="${(ly+11).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="13" font-family="Segoe UI,Arial,sans-serif" font-weight="800">${epVal} / ${oppVal}</text>`;
+    svg+=`<text x="${lx.toFixed(1)}" y="${(ly+11).toFixed(1)}" text-anchor="${anchor}" fill="${diffCol}" font-size="14" font-family="Segoe UI,Arial,sans-serif" font-weight="800">${sign}${diff}</text>`;
   });
   svg+=`</svg>`;
   return svg;
