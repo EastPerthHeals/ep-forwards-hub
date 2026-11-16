@@ -31,7 +31,7 @@ body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font)
 .analysis-neutral{background:rgba(136,153,180,0.1);color:var(--text-muted);border:1px solid var(--border)}
 body::before{content:'';position:fixed;inset:0;background-image:url('/logo.png');background-repeat:no-repeat;background-position:center center;background-size:520px auto;opacity:0.04;pointer-events:none;z-index:0;transition:opacity 0.2s,background-color 0.2s;}
 body.page-white{background:#f8f9fb;}
-body.page-white::before{opacity:0.12;}
+body.page-white::before{opacity:0.08;background-position:center 62%;}
 body.page-white .header{background:#fff;border-bottom:1px solid #e5e7eb;}
 body.page-white .header-title,body.page-white .header-sub{color:#1a1d23;}
 body.page-white .header-dot{background:#003087;}
@@ -1895,13 +1895,11 @@ function buildMidRadarSVG(r){
   };
   // viewBox: 400 wide, 380 tall — room for labels on all 6 sides
   let svg=`<svg viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;overflow:visible">`;
-  // Background
-  svg+=`<rect width="400" height="380" fill="white" rx="10"/>`;
-  // Grid rings
+  // Grid rings — no background, bolder lines
   [0.25,0.5,0.75,1].forEach(frac=>{
     const pts=MID_RADAR_STATS.map((_,i)=>pt(frac,i).join(','));
-    const opacity = frac===1 ? 0.35 : 0.18;
-    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(0,48,135,${opacity})" stroke-width="${frac===1?1.5:1}"/>`;
+    const opacity = frac===1 ? 0.6 : 0.25;
+    svg+=`<polygon points="${pts.join(' ')}" fill="none" stroke="rgba(0,48,135,${opacity})" stroke-width="${frac===1?2.5:1.5}"/>`;
   });
   // Axes
   MID_RADAR_STATS.forEach((_,i)=>{
