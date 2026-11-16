@@ -38,9 +38,10 @@ body.page-white .header-dot{background:#003087;}
 body.page-white .nav{background:#fff;border-bottom:1px solid #e5e7eb;}
 body.page-white .nav-btn{color:#374151;border-color:#e5e7eb;background:#fff;}
 body.page-white .nav-btn.active{background:#003087;color:#fff;border-color:#003087;}
-body.page-white .round-tabs{background:#f1f5f9;border-bottom:1px solid #e5e7eb;}
-body.page-white .round-tab{color:#374151;background:transparent;border-color:transparent;}
+body.page-white .round-tabs{background:transparent;border-bottom:none;}
+body.page-white .round-tab{color:#374151;background:#fff;border-color:#e5e7eb;}
 body.page-white .round-tab.active{background:#003087;color:#fff;border-color:#003087;}
+body.page-white .round-tab:hover{border-color:#003087;color:#003087;}
 body.page-white .section-label{color:#374151;}
 body.page-white .hint{color:#6b7280;}
 .page,.header,.nav{position:relative;z-index:1;}
@@ -1951,20 +1952,17 @@ function renderMidRoundContent(idx, rounds){
   const cellCol = v => v>0?'#4ecb8d':v<0?'#e07070':'var(--text-muted)';
   const mfrCol = r.mfr>0?'#4ecb8d':r.mfr<0?'#e07070':'var(--text-muted)';
 
-  // ── ANALYST DASHBOARD LAYOUT — white card ──
-  const W = '#ffffff', BORDER = '#e5e7eb', SUBTEXT = '#6b7280', MAINTEXT = '#111827';
+  const SUBTEXT = '#6b7280', MAINTEXT = '#111827';
 
-  // MFR formula explanation — pinned at top of page
-  let h = `<div style="background:#fff;border:1px solid ${BORDER};border-radius:12px;padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <div style="font-size:11px;font-weight:800;letter-spacing:0.1em;color:#003087;text-transform:uppercase;flex-shrink:0">MFR Formula</div>
-    <div style="font-size:0.95rem;color:${MAINTEXT};font-weight:600">
-      CB First Poss Diff &nbsp;+&nbsp; (Clearances Diff <span style="color:#003087">×2</span>) &nbsp;+&nbsp; Inside 50 Diff &nbsp;+&nbsp; (Score Inv Diff <span style="color:#003087">÷3</span>)
-    </div>
-    <div style="margin-left:auto;font-size:0.88rem;color:${SUBTEXT};white-space:nowrap">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></div>
+  // MFR formula bar — no card, just text on the page
+  let h = `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb">
+    <span style="font-size:11px;font-weight:800;letter-spacing:0.1em;color:#003087;text-transform:uppercase">MFR Formula</span>
+    <span style="font-size:0.95rem;color:${MAINTEXT};font-weight:600">CB First Poss + (Clearances <span style="color:#003087">×2</span>) + Inside 50s + (Score Inv <span style="color:#003087">÷3</span>)</span>
+    <span style="margin-left:auto;font-size:0.88rem;color:${SUBTEXT}">Top-3 benchmark: <strong style="color:${MAINTEXT}">+12</strong></span>
   </div>`;
 
-  // Header row: MFR badge + round info
-  h += `<div style="display:flex;align-items:center;gap:20px;padding:20px 24px 18px;background:${W};border-radius:14px 14px 0 0;border:1px solid ${BORDER};border-bottom:none">
+  // Header — no card, just on the page
+  h += `<div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
     <div style="background:#003087;border-radius:14px;padding:14px 24px;text-align:center;min-width:110px;flex-shrink:0">
       <div style="font-size:2.4rem;font-weight:900;line-height:1;color:#fff">${r.mfr>0?'+':''}${r.mfr}</div>
       <div style="font-size:10px;letter-spacing:0.1em;opacity:0.85;color:#fff;margin-top:4px">MFR RATING</div>
@@ -1984,26 +1982,32 @@ function renderMidRoundContent(idx, rounds){
     </div>
   </div>`;
 
-  // Two-column body: radar left, bars right
-  h += `<div style="display:grid;grid-template-columns:52% 48%;background:${W};border-radius:0 0 14px 14px;border:1px solid ${BORDER};border-top:1px solid ${BORDER};overflow:hidden;margin-bottom:20px">`;
+  // Two-column body — no card/border, directly on page
+  h += `<div style="display:grid;grid-template-columns:52% 48%;gap:32px;margin-bottom:28px">`;
 
-  // LEFT: radar
-  h += `<div style="padding:20px 16px 20px 20px;border-right:1px solid ${BORDER}">`;
-  h += `<div style="font-size:11px;letter-spacing:0.08em;color:${SUBTEXT};font-weight:700;margin-bottom:12px;text-transform:uppercase">Radar · EP vs Opposition</div>`;
+  // LEFT: radar — no background box
+  h += `<div>`;
+  h += `<div style="font-size:13px;font-weight:700;color:${MAINTEXT};margin-bottom:10px">Radar — EP vs Opposition</div>`;
   h += buildMidRadarSVG(r);
-  h += `<div style="display:flex;gap:20px;justify-content:center;margin-top:12px;font-size:13px;color:${SUBTEXT}">
-    <span><span style="color:#003087;font-weight:900">━━</span> East Perth</span>
-    <span><span style="color:#c0392b">╌╌</span> Opposition</span>
+  // Legend same width as radar, matching stats font size
+  h += `<div style="display:flex;gap:24px;margin-top:10px;font-size:0.95rem;font-weight:600;color:${MAINTEXT}">
+    <span style="display:flex;align-items:center;gap:8px">
+      <svg width="32" height="4"><rect width="32" height="4" rx="2" fill="#003087"/></svg>
+      East Perth
+    </span>
+    <span style="display:flex;align-items:center;gap:8px">
+      <svg width="32" height="4"><rect width="10" height="4" rx="2" fill="#c0392b"/><rect x="14" width="10" height="4" rx="2" fill="#c0392b"/><rect x="28" width="4" height="4" rx="2" fill="#c0392b"/></svg>
+      Opposition
+    </span>
   </div>`;
   h += `</div>`;
 
-  // RIGHT: horizontal bars — scale relative to max(ep, opp) per stat so bars are always meaningful
-  h += `<div style="padding:20px 20px 20px 18px">`;
-  h += `<div style="font-size:11px;letter-spacing:0.08em;color:${SUBTEXT};font-weight:700;margin-bottom:16px;text-transform:uppercase">Stats Head-to-Head</div>`;
+  // RIGHT: horizontal bars — no background box
+  h += `<div>`;
+  h += `<div style="font-size:13px;font-weight:700;color:${MAINTEXT};margin-bottom:16px">Stats Head-to-Head</div>`;
   MID_RADAR_STATS.forEach(s => {
     const ep = r[s.key+'_ep'] ?? null;
     const opp = r[s.key+'_opp'] ?? null;
-    // Scale so the larger value = 100%, the smaller is proportional
     const scale = (ep!=null && opp!=null) ? Math.max(ep, opp) : (ep ?? opp ?? 1);
     const epPct  = ep!=null  ? Math.round((ep/scale)*100)  : 0;
     const oppPct = opp!=null ? Math.round((opp/scale)*100) : 0;
@@ -2011,12 +2015,12 @@ function renderMidRoundContent(idx, rounds){
     let weightNote = '';
     if(diff!==null && s.weight){ weightNote=` <span style="font-size:11px;color:${SUBTEXT};font-weight:400">(×${s.weight} in MFR)</span>`; }
     else if(diff!==null && s.div){ weightNote=` <span style="font-size:11px;color:${SUBTEXT};font-weight:400">(÷${s.div} in MFR)</span>`; }
-    h += `<div style="margin-bottom:14px">
+    h += `<div style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
         <span style="font-size:0.95rem;font-weight:700;color:${MAINTEXT}">${s.barLabel}${weightNote}</span>
         <span style="font-size:0.95rem;font-weight:800;color:${diff!==null?cellCol(diff):SUBTEXT}">${diff!==null?signFmt(diff):'—'}</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <span style="font-size:12px;color:#003087;font-weight:700;width:26px;text-align:right;flex-shrink:0">EP</span>
         <div style="flex:1;background:#e8eef7;border-radius:999px;height:11px;overflow:hidden">
           <div style="width:${epPct}%;height:100%;background:#003087;border-radius:999px"></div>
@@ -2032,22 +2036,24 @@ function renderMidRoundContent(idx, rounds){
       </div>
     </div>`;
   });
-  h += `<div style="margin-top:12px;padding:10px 13px;background:#f3f4f6;border-radius:8px;font-size:13px;color:${SUBTEXT}">
-    <strong style="color:${MAINTEXT}">MFR =</strong> CB First Poss + (Clearances ×2) + Inside 50s + (Score Inv ÷3)
-  </div>`;
   h += `</div>`; // end right col
   h += `</div>`; // end grid
 
-  // Notes
-  h += `<div class="section-label" style="margin-bottom:10px;margin-top:4px">Round Notes — ${r.short}</div>`
-    + `<div class="notes-box" style="border-color:var(--accent)">`
-    +   `<div class="opp-notes-list" id="midRoundNotesList"><p class="hint" style="margin:0">Loading...</p></div>`
-    +   `<div class="opp-note-form">`
-    +     `<input type="text" id="midRoundNoteAuthor" placeholder="Your name" maxlength="40">`
-    +     `<textarea id="midRoundNoteText" placeholder="Midfield notes for this round..." rows="2" maxlength="500"></textarea>`
-    +     `<button type="button" onclick="addMidRoundNote(${r.round_num})">Add Note</button>`
-    +   `</div>`
-    + `</div>`;
+  // Notes — clean, minimal, on the page
+  h += `<div style="border-top:1px solid #e5e7eb;padding-top:20px;margin-top:4px">
+    <div style="font-size:13px;font-weight:700;color:${MAINTEXT};margin-bottom:14px">Round Notes — ${r.short}</div>
+    <div id="midRoundNotesList" style="margin-bottom:16px"><p style="color:${SUBTEXT};font-size:0.9rem">Loading...</p></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;gap:10px">
+        <input type="text" id="midRoundNoteAuthor" placeholder="Your name" maxlength="40"
+          style="width:160px;padding:9px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:0.9rem;font-family:inherit;color:${MAINTEXT};background:#fff;outline:none">
+        <input type="text" id="midRoundNoteText" placeholder="Add a note for this round…" maxlength="500"
+          style="flex:1;padding:9px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:0.9rem;font-family:inherit;color:${MAINTEXT};background:#fff;outline:none">
+        <button type="button" onclick="addMidRoundNote(${r.round_num})"
+          style="padding:9px 20px;background:#003087;color:#fff;border:none;border-radius:8px;font-size:0.9rem;font-weight:700;cursor:pointer;white-space:nowrap">Add Note</button>
+      </div>
+    </div>
+  </div>`;
 
   document.getElementById('midTeamContent').innerHTML = h;
   loadMidRoundNotes(r.round_num);
@@ -2059,9 +2065,9 @@ async function loadMidRoundNotes(roundNum){
   try{
     const notes = await siteFetch('/api/round-notes/'+roundNum).then(r=>r.json());
     list.innerHTML = (notes&&notes.length)
-      ? notes.map(n=>'<div class="opp-note"><span class="opp-note-author">'+escapeHtml(n.author)+':</span>'+escapeHtml(n.note)+'</div>').join('')
-      : '<p class="hint" style="margin:0">No notes yet.</p>';
-  }catch(e){ list.innerHTML='<p class="hint" style="margin:0">Could not load notes.</p>'; }
+      ? notes.map(n=>`<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6;align-items:baseline"><span style="font-weight:700;color:#003087;font-size:0.9rem;white-space:nowrap;min-width:80px">${escapeHtml(n.author)}</span><span style="font-size:0.9rem;color:#374151">${escapeHtml(n.note)}</span></div>`).join('')
+      : '<p style="color:#9ca3af;font-size:0.9rem">No notes yet.</p>';
+  }catch(e){ list.innerHTML='<p style="color:#9ca3af;font-size:0.9rem">Could not load notes.</p>'; }
 }
 
 async function addMidRoundNote(roundNum){
