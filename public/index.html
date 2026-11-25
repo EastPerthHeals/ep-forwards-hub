@@ -848,7 +848,7 @@ function showPage(n,b){
   document.querySelectorAll('#playersNav .nav-btn').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+n).classList.add('active');
   if(b) b.classList.add('active');
-  document.body.classList.toggle('page-white', n==='mid-team');
+  document.body.classList.toggle('page-white', n==='mid-team' || n==='mfr');
   if(n==='mfr') loadMFRPage();
   if(n==='mid-team') renderMidRounds();
 }
@@ -2231,7 +2231,7 @@ async function loadMFRPage(){
 }
 
 function renderMFRPage(rounds){
-  const BENCHMARK = 12; // top-3 average MFR
+  const BENCHMARK = 21; // top-3 average MFR
   const labels = rounds.map(r=>r.short);
   const mfrs = rounds.map(r=>r.mfr);
   const wls = rounds.map(r=>r.wl);
@@ -2250,7 +2250,7 @@ function renderMFRPage(rounds){
           borderColor:'rgba(180,180,255,0.6)', borderDash:[6,4], borderWidth:2,
           pointRadius:0, fill:false, order:1},
         {label:'Zero', data:Array(mfrs.length).fill(0), type:'line',
-          borderColor:'rgba(255,255,255,0.15)', borderWidth:1,
+          borderColor:'rgba(100,116,139,0.3)', borderWidth:1,
           pointRadius:0, fill:false, order:0}
       ]
     },
